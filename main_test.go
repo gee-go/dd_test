@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/k0kubun/pp"
+	"github.com/stretchr/testify/require"
 )
 
 type Parser struct {
@@ -14,9 +17,9 @@ type Parser struct {
 }
 
 type Message struct {
-	RemoteAddr    string
-	UserId        string
-	RemoteUser    string
+	Remote        string
+	Ident         string
+	Auth          string
 	Time          time.Time
 	Request       string
 	Status        string
@@ -36,6 +39,12 @@ func (m *Message) set(i int, s string) {
 	}
 }
 
+var delimMap = map[rune]rune{
+	'[': ']',
+	'"': '"',
+}
+
+// TODO - check for urls that contain [] or ""
 func LogFields(l string) *Message {
 	// a := make([]string, 7)
 	na := 0
@@ -43,7 +52,6 @@ func LogFields(l string) *Message {
 	mode := ' '
 
 	msg := &Message{}
-	// rmsg := reflect.ValueOf(msg).Elem()
 
 	for i, r := range l {
 		switch r {
@@ -55,11 +63,16 @@ func LogFields(l string) *Message {
 			}
 			mode = ' '
 		case '[':
-			fieldStart = -1
-			mode = ']'
+			if mode == ' ' {
+				fieldStart = -1
+				mode = ']'
+			}
+
 		case '"':
-			fieldStart = -1
-			mode = '"'
+			if mode == ' ' {
+				fieldStart = -1
+				mode = '"'
+			}
 		default:
 			if fieldStart == -1 {
 				fieldStart = i
@@ -72,10 +85,32 @@ func LogFields(l string) *Message {
 	return msg
 }
 
-func LogFields2(l, f string) *Message {
-	msg := &Message{}
+type Field struct {
+	Name    string
+	EndRune rune
+}
 
-	return msg
+func LogFields2(l, f string) map[string]string {
+	out := make(map[string]string)
+
+	fieldStart := -1
+
+	for i, r := range f {
+		switch {
+		case r == '{':
+			fieldStart = -1
+		case r == '}':
+			fmt.Println(f[fieldStart:i])
+		case unicode.IsLetter(r):
+			if fieldStart == -1 {
+				fieldStart = i
+			}
+		default:
+			fmt.Printf("%c %v\n", r, r)
+		}
+	}
+
+	return out
 }
 
 func BenchmarkFields(b *testing.B) {
@@ -86,12 +121,13 @@ func BenchmarkFields(b *testing.B) {
 	}
 }
 
-func BenchmarkLogFields2(b *testing.B) {
-	f := `%h %l %u [%t] "%r" %>s %b`
+func TestLogFields2(t *testing.T) {
+	f := `{remote} {ident} [{time}] "{method} {uri} {proto}" {status} {size}`
+
 	l := `127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`
-	for i := 0; i < b.N; i++ {
-		LogFields2(l, f)
-	}
+
+	LogFields2(l, f)
+
 }
 
 func BenchmarkLogFields(b *testing.B) {
@@ -104,4 +140,10 @@ func BenchmarkLogFields(b *testing.B) {
 func TestMain(t *testing.T) {
 	l := `127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`
 	pp.Println(LogFields(l))
+
+	l2 := `127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif?a=[ HTTP/1.0" 200 2326`
+	msg := LogFields(l2)
+	assert := require.New(t)
+	assert.Equal("GET /apache_pb.gif?a=[ HTTP/1.0", msg.Request)
+
 }
