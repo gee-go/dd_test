@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"reflect"
 	"time"
+	"unicode"
 )
 
 const (
@@ -39,6 +41,25 @@ func (m *Message) set(i int, s string) {
 		}
 	default:
 		reflect.ValueOf(m).Elem().Field(i).SetString(s)
+	}
+}
+
+func ParseFormat(f string) {
+	fieldStart := -1
+
+	for i, r := range f {
+		switch {
+		case r == '{':
+			fieldStart = -1
+		case r == '}':
+			fmt.Println(f[fieldStart:i])
+		case unicode.IsLetter(r):
+			if fieldStart == -1 {
+				fieldStart = i
+			}
+		default:
+			fmt.Printf("%c %v\n", r, r)
+		}
 	}
 }
 
