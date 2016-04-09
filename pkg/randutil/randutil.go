@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"math/rand"
 	"net"
+	"time"
 	"unicode/utf8"
 )
 
@@ -16,11 +17,15 @@ type Rand struct {
 	rand *rand.Rand
 }
 
-func FromSeed(seed int64) *Rand {
-	return New(rand.New(rand.NewSource(seed)))
+func New() *Rand {
+	return FromSeed(time.Now().UnixNano())
 }
 
-func New(r *rand.Rand) *Rand {
+func FromSeed(seed int64) *Rand {
+	return Quick(rand.New(rand.NewSource(seed)))
+}
+
+func Quick(r *rand.Rand) *Rand {
 	return &Rand{r}
 }
 

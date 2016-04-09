@@ -1,11 +1,29 @@
 package randutil
 
 import (
+	"math/rand"
+	"reflect"
 	"testing"
+	"testing/quick"
 	"unicode"
 )
 
-func TestString(t *testing.T) {
+type unicodeTestCase struct {
+	r    []rune
+	size int
+}
+
+func (*unicodeTestCase) Generate(rand *rand.Rand, size int) reflect.Value {
+	tc := &unicodeTestCase{
+		r:    Quick(rand).Unicode(unicode.L, size),
+		size: size,
+	}
+
+	return reflect.ValueOf(tc)
+}
+
+func TestUnicode(t *testing.T) {
+	t.Parallel()
 	rt := unicode.L
 
 	// select every uint16 letter
@@ -24,12 +42,31 @@ func TestString(t *testing.T) {
 		}
 	}
 
-	// r := FromSeed(time.Now().UnixNano())
-	// r.Unicode(unicode.L)
-	// fmt.Printf("%c", r.Unicode(unicode.L))
+	// quick check unicode
+	f := func(tc *unicodeTestCase) bool {
+		if len(tc.r) != tc.size {
+			return false
+		}
 
-	// // for _, r := range l.R16 {
-	// //   for i
-	// // }
+		for _, r := range tc.r {
+			if !unicode.IsLetter(r) {
+				return false
+			}
+		}
 
+		return true
+	}
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
+
+}
+
+func BenchmarkUnicode(b *testing.B) {
+	l := unicode.L
+	r := New()
+
+	for i := 0; i < b.N; i++ {
+		r.Unicode(l, 1)
+	}
 }

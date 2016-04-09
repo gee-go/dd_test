@@ -24,7 +24,7 @@ type Message struct {
 // Generate a random message for using the testing/quick package
 func (*Message) Generate(rand *rand.Rand, size int) reflect.Value {
 	m := &Message{}
-	r := randutil.New(rand)
+	r := randutil.Quick(rand)
 	m.Remote = r.IPv4().String()
 	m.Ident = "-"
 	return reflect.ValueOf(m)

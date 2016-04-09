@@ -47,17 +47,20 @@ func selectR32(rt *unicode.RangeTable, i int) rune {
 	return -1
 }
 
-func (r *Rand) Unicode(rt *unicode.RangeTable) rune {
+func (r *Rand) Unicode(rt *unicode.RangeTable, n int) []rune {
 	c16 := countR16(rt)
 	c32 := countR32(rt)
-	i := r.rand.Intn(c16 + c32)
-	if i < c16 {
-		return selectR16(rt, i)
+
+	out := make([]rune, n)
+	for i := 0; i < n; i++ {
+		ri := r.rand.Intn(c16 + c32)
+		if ri < c16 {
+			out[i] = selectR16(rt, ri)
+		} else {
+			out[i] = selectR32(rt, ri-c16)
+		}
+
 	}
 
-	return selectR32(rt, i-c16)
-}
-
-func RandomUnicode(*unicode.RangeTable) {
-
+	return out
 }
