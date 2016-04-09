@@ -7,7 +7,7 @@ import (
 
 func TestMessage(t *testing.T) {
 	t.Parallel()
-	ParseFormat(DefaultLogFormat)
+
 	f := func(m *Message) bool {
 		m.Format()
 		return false
