@@ -2,13 +2,12 @@ package main
 
 import (
 	"unicode"
-
-	"golang.org/x/exp/utf8string"
+	"unicode/utf8"
 )
 
 // Parser is used to convert lines to Message structs
 type Parser struct {
-	s   *utf8string.String
+	s   string
 	f   string
 	pos int
 	end rune
@@ -21,26 +20,30 @@ func NewParser(f string) *Parser {
 // parseUntil scans through the log line util the fn returns true.
 func (p *Parser) parseUntil(fn func(rune) bool) string {
 	var v string
-	l := p.s.RuneCount()
+	var r rune
 
-	for i := p.pos; i < l; i++ {
-		r := p.s.At(i)
+	// scan until fn return true
+	for i, w := p.pos, 0; i < len(p.s); i += w {
+		r, w = utf8.DecodeRuneInString(p.s[i:])
+
 		if fn(r) {
-			v = p.s.Slice(p.pos, i)
+			v = p.s[p.pos:i]
 			p.pos = i + 1
 			break
 		}
+
 	}
 
 	// at end of string
 	if v == "" {
-		return p.s.Slice(p.pos, l)
+		return p.s[p.pos:]
 	}
 
 	// skip delim chars.
-	for i := p.pos; i < l; i++ {
-		r := p.s.At(i)
-		if unicode.IsSpace(r) || r == ']' || r == '"' || r == '[' {
+	for i, w := p.pos, 0; i < len(p.s); i += w {
+		r, w = utf8.DecodeRuneInString(p.s[i:])
+
+		if r == ' ' || r == ']' || r == '"' || r == '[' || unicode.IsSpace(r) {
 			p.pos++
 		} else {
 			return v
@@ -66,7 +69,7 @@ func (p *Parser) parse() string {
 func (p *Parser) Parse(l string) *Message {
 	p.pos = 0
 	p.end = ' '
-	p.s = utf8string.NewString(l)
+	p.s = l
 
 	fieldStart := -1
 	prev := ' '

@@ -1,20 +1,19 @@
 package main
 
 import (
-	"reflect"
 	"testing"
-	"testing/quick"
+
+	"github.com/gee-go/dd_test/pkg/randutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMessage(t *testing.T) {
 	t.Parallel()
 	p := NewParser(DefaultLogFormat)
+	assert := require.New(t)
 
-	f := func(m *Message) bool {
-		l := m.Format()
-		return reflect.DeepEqual(m, p.Parse(l))
-	}
-	if err := quick.Check(f, nil); err != nil {
-		t.Error(err)
+	for i := 0; i < 1000; i++ {
+		m := randMessage(randutil.R)
+		assert.Equal(m, p.Parse(m.String()))
 	}
 }
