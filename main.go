@@ -7,7 +7,7 @@ import (
 
 const (
 	// DefaultLogFormat is a format string for the common log format
-	DefaultLogFormat = `{remote} {ident} [{time}] "{method} {uri} {proto}" {status} {size}`
+	DefaultLogFormat = `{remote} {ident} [{time}] "{request}" {status} {size}`
 
 	// DefaultTimeFormat is the default format string used to parse timestamps
 	DefaultTimeFormat = "02/Jan/2006:15:04:05 -0700"

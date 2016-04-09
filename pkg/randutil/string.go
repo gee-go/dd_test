@@ -53,7 +53,7 @@ func (r *Rand) Unicode(rt *unicode.RangeTable, n int) []rune {
 
 	out := make([]rune, n)
 	for i := 0; i < n; i++ {
-		ri := r.rand.Intn(c16 + c32)
+		ri := r.Rand.Intn(c16 + c32)
 		if ri < c16 {
 			out[i] = selectR16(rt, ri)
 		} else {

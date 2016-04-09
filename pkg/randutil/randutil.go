@@ -14,7 +14,7 @@ var (
 )
 
 type Rand struct {
-	rand *rand.Rand
+	Rand *rand.Rand
 }
 
 func New() *Rand {
@@ -29,7 +29,7 @@ func Quick(r *rand.Rand) *Rand {
 // Bytes generates n bytes
 func (r *Rand) Bytes(n int) []byte {
 	b := make([]byte, n)
-	r.rand.Read(b) // its ok to ignore err https://golang.org/pkg/math/rand/#Read
+	r.Rand.Read(b) // its ok to ignore err https://golang.org/pkg/math/rand/#Read
 	return b
 }
 
@@ -40,7 +40,7 @@ func (r *Rand) IPv4() net.IP {
 
 // IntRange returns a non-negative pseudo-random number in [min,max)
 func (r *Rand) IntRange(min, max int) int {
-	return min + r.rand.Intn(max-min)
+	return min + r.Rand.Intn(max-min)
 }
 
 // Alpha returns a random string of len(n) with azAZ chars.
@@ -53,7 +53,18 @@ func (r *Rand) string(n int, choices *utf8string.String) string {
 
 	out := make([]rune, n)
 	for i := 0; i < n; i++ {
-		out[i] = choices.At(r.rand.Intn(l))
+		out[i] = choices.At(r.Rand.Intn(l))
 	}
 	return string(out)
+}
+
+// SelectString returns a random string from the given choices.
+// Returns "" if no choices are given
+func (r *Rand) SelectString(choices ...string) string {
+	if len(choices) == 0 {
+		return ""
+	}
+
+	return choices[r.Rand.Intn(len(choices))]
+
 }
