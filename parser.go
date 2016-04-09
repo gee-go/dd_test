@@ -11,7 +11,6 @@ type Parser struct {
 	s   *utf8string.String
 	f   string
 	pos int
-
 	end rune
 }
 
@@ -19,24 +18,26 @@ func NewParser(f string) *Parser {
 	return &Parser{f: f}
 }
 
+// parseUntil scans through the log line util the fn returns true.
 func (p *Parser) parseUntil(fn func(rune) bool) string {
 	var v string
 	l := p.s.RuneCount()
 
 	for i := p.pos; i < l; i++ {
 		r := p.s.At(i)
-
-		// consume until fn true or end of string
 		if fn(r) {
 			v = p.s.Slice(p.pos, i)
 			p.pos = i + 1
 			break
 		}
 	}
+
+	// at end of string
 	if v == "" {
 		return p.s.Slice(p.pos, l)
 	}
 
+	// skip delim chars.
 	for i := p.pos; i < l; i++ {
 		r := p.s.At(i)
 		if unicode.IsSpace(r) || r == ']' || r == '"' || r == '[' {
@@ -61,6 +62,7 @@ func (p *Parser) parse() string {
 	return s
 }
 
+// Parse converts a line to a message.
 func (p *Parser) Parse(l string) *Message {
 	p.pos = 0
 	p.end = ' '
