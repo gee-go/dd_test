@@ -66,7 +66,7 @@ func (p *Parser) parse() string {
 }
 
 // Parse converts a line to a message.
-func (p *Parser) Parse(l string) *Message {
+func (p *Parser) Parse(l string) (*Message, error) {
 	p.pos = 0
 	p.end = ' '
 	p.s = l
@@ -88,7 +88,9 @@ func (p *Parser) Parse(l string) *Message {
 				p.end = prev
 			}
 		case '}':
-			msg.set(p.f[fieldStart:i], p.parse())
+			if err := msg.set(p.f[fieldStart:i], p.parse()); err != nil {
+				return msg, err
+			}
 		}
 
 		if prev == '{' {
@@ -98,6 +100,6 @@ func (p *Parser) Parse(l string) *Message {
 		prev = r
 	}
 
-	return msg
+	return msg, nil
 
 }

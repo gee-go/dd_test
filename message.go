@@ -11,16 +11,10 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/gee-go/dd_test/pkg/randutil"
+	"github.com/gee-go/dd_test/src/randutil"
 )
 
-type Request struct {
-	Method string
-	URI    string
-	Proto  string
-}
-
-func randRequest(r *randutil.Rand) *Request {
+func randURI(r *randutil.Rand) string {
 	var path bytes.Buffer
 
 	// 1 to 5 path components
@@ -36,32 +30,27 @@ func randRequest(r *randutil.Rand) *Request {
 		u.Query().Set(r.Alpha(r.IntRange(1, 5)), r.Alpha(r.IntRange(1, 5)))
 	}
 
-	return &Request{
-		Method: r.SelectString("GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"),
-		URI:    u.String(),
-		Proto:  "HTTP/1.0",
-	}
+	return u.RequestURI()
 
-}
-
-func (r *Request) String() string {
-	return fmt.Sprintf(`"%s %s %s"`, r.Method, r.URI, r.Proto)
 }
 
 // Message represents a single log line.
 type Message struct {
-	Remote  string    `log:"remote"`
-	Ident   string    `log:"ident"`
-	Auth    string    `log:"auth"`
-	Time    time.Time `log:"time"`
-	Request *Request  `log:"request"`
-	Status  string    `log:"status"`
-	Size    string    `log:"size"`
+	Remote string
+	Ident  string
+	Auth   string
+	Time   time.Time
+	Method string
+	URI    string
+	Proto  string
+	Status string
+	Size   string
 }
 
 func (m *Message) String() string {
 	t := fmt.Sprintf("[%s]", m.Time.Format(DefaultTimeFormat))
-	parts := []string{m.Remote, m.Ident, m.Auth, t, m.Request.String(), m.Status, m.Size}
+	req := fmt.Sprintf(`"%s %s %s"`, m.Method, m.URI, m.Proto)
+	parts := []string{m.Remote, m.Ident, m.Auth, t, req, m.Status, m.Size}
 	return strings.Join(parts, " ")
 }
 
@@ -82,11 +71,10 @@ func (m *Message) set(f, s string) error {
 			return fmt.Errorf("%s is an invalid request", s)
 		}
 
-		m.Request = &Request{
-			Method: parts[0],
-			URI:    parts[1],
-			Proto:  parts[2],
-		}
+		m.Method = parts[0]
+		m.URI = parts[1]
+		m.Proto = parts[2]
+
 	case "status":
 		m.Status = s
 	case "size":
@@ -109,13 +97,15 @@ func randMessage(r *randutil.Rand) *Message {
 	t, _ := time.Parse(DefaultTimeFormat, time.Now().Format(DefaultTimeFormat))
 
 	return &Message{
-		Remote:  r.IPv4().String(),
-		Ident:   "-",
-		Auth:    auth,
-		Time:    t,
-		Request: randRequest(r),
-		Status:  r.SelectString("200", "400"),
-		Size:    strconv.Itoa(r.IntRange(1<<8, 1<<26)),
+		Remote: r.IPv4().String(),
+		Ident:  "-",
+		Auth:   auth,
+		Time:   t,
+		Method: r.SelectString("GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"),
+		URI:    randURI(r),
+		Proto:  "HTTP/1.0",
+		Status: r.SelectString("200", "400"),
+		Size:   strconv.Itoa(r.IntRange(1<<8, 1<<26)),
 	}
 }
 
