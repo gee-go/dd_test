@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"reflect"
-	"time"
 	"unicode"
 )
 
@@ -14,35 +12,6 @@ const (
 	// DefaultTimeFormat is the default format string used to parse timestamps
 	DefaultTimeFormat = "02/Jan/2006:15:04:05 -0700"
 )
-
-// Message represents a single log line.
-type Message struct {
-	Remote string
-	Ident  string
-	Auth   string
-	Time   time.Time
-
-	// Request
-	Method string
-	URI    string
-	Proto  string
-
-	Status string
-	Size   string
-}
-
-func (m *Message) set(i int, s string) {
-	switch i {
-	case 3:
-		t, err := time.Parse(DefaultTimeFormat, s)
-		m.Time = t
-		if err != nil {
-			panic(err)
-		}
-	default:
-		reflect.ValueOf(m).Elem().Field(i).SetString(s)
-	}
-}
 
 func ParseFormat(f string) {
 	fieldStart := -1
