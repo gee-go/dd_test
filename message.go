@@ -20,33 +20,6 @@ type Request struct {
 	Proto  string
 }
 
-func (r *Request) Format() string {
-	return fmt.Sprintf("%s %s %s", r.Method, url.QueryEscape(r.URI), r.Proto)
-}
-
-// Message represents a single log line.
-type Message struct {
-	Remote  string    `log:"remote"`
-	Ident   string    `log:"ident"`
-	Auth    string    `log:"auth"`
-	Time    time.Time `log:"time"`
-	Request *Request  `log:"request"`
-	Status  string    `log:"status"`
-	Size    string    `log:"size"`
-}
-
-func (m *Message) Format() string {
-	v := reflect.ValueOf(m).Elem()
-	t := v.Type()
-
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		fmt.Println(field.Tag.Get("log"))
-	}
-
-	return ""
-}
-
 func randRequest(r *randutil.Rand) *Request {
 	var path bytes.Buffer
 	// path components
@@ -64,6 +37,60 @@ func randRequest(r *randutil.Rand) *Request {
 
 }
 
+func (r *Request) Format() string {
+	return fmt.Sprintf(`"%s %s %s"`, r.Method, url.QueryEscape(r.URI), r.Proto)
+}
+
+// Message represents a single log line.
+type Message struct {
+	Remote  string    `log:"remote"`
+	Ident   string    `log:"ident"`
+	Auth    string    `log:"auth"`
+	Time    time.Time `log:"time"`
+	Request *Request  `log:"request"`
+	Status  string    `log:"status"`
+	Size    string    `log:"size"`
+}
+
+func (m *Message) Format() string {
+	t := fmt.Sprintf("[%s]", m.Time.Format(DefaultTimeFormat))
+	parts := []string{m.Remote, m.Ident, m.Auth, t, m.Request.Format(), m.Status, m.Size}
+	return strings.Join(parts, " ")
+}
+
+func (m *Message) set(f, s string) error {
+	var err error
+	switch f {
+	case "remote":
+		m.Remote = s
+	case "ident":
+		m.Ident = s
+	case "auth":
+		m.Auth = s
+	case "time":
+		m.Time, err = time.Parse(DefaultTimeFormat, s)
+	case "request":
+		parts := strings.Fields(s)
+		if len(parts) != 3 {
+			return fmt.Errorf("%s is an invalid request", s)
+		}
+
+		m.Request = &Request{
+			Method: parts[0],
+			URI:    parts[1],
+			Proto:  parts[2],
+		}
+	case "status":
+		m.Status = s
+	case "size":
+		m.Size = s
+	default:
+		return fmt.Errorf("Unknown field %s", f)
+	}
+
+	return err
+}
+
 // Generate a random message for using the testing/quick package
 func (*Message) Generate(rand *rand.Rand, size int) reflect.Value {
 	r := randutil.Quick(rand)
@@ -74,7 +101,7 @@ func (*Message) Generate(rand *rand.Rand, size int) reflect.Value {
 	}
 
 	// format then parse so it has the same precision as the parser
-	t, _ := time.Parse(DefaultLogFormat, time.Now().Format(DefaultLogFormat))
+	t, _ := time.Parse(DefaultTimeFormat, time.Now().Format(DefaultTimeFormat))
 
 	m := &Message{
 		Remote:  r.IPv4().String(),
@@ -87,27 +114,4 @@ func (*Message) Generate(rand *rand.Rand, size int) reflect.Value {
 	}
 
 	return reflect.ValueOf(m)
-}
-
-func (m *Message) set(i int, s string) error {
-	var err error
-	switch i {
-	case 3:
-		m.Time, err = time.Parse(DefaultTimeFormat, s)
-	case 4:
-		parts := strings.Fields(s)
-		if len(parts) != 3 {
-			return fmt.Errorf("%s is an invalid request", s)
-		}
-
-		m.Request = &Request{
-			Method: parts[0],
-			URI:    parts[1],
-			Proto:  parts[2],
-		}
-	default:
-		reflect.ValueOf(m).Elem().Field(i).SetString(s)
-	}
-
-	return err
 }
