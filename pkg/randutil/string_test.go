@@ -70,3 +70,9 @@ func BenchmarkUnicode(b *testing.B) {
 		r.Unicode(l, 1)
 	}
 }
+
+func BenchmarkLetters(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		R.Alpha(10)
+	}
+}

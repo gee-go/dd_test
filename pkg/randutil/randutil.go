@@ -1,16 +1,16 @@
 package randutil
 
 import (
-	"bytes"
 	"math/rand"
 	"net"
 	"time"
-	"unicode/utf8"
+
+	"golang.org/x/exp/utf8string"
 )
 
-const (
-	alpha   = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	letters = alpha + "日a本b語ç日ð本Ê語þ日¥本¼語i日©日a本b語ç日ð本Ê語þ日¥本¼語i日©日a本b語ç日ð本Ê語þ日¥本¼語i日©"
+var (
+	R      = New()
+	alphaC = utf8string.NewString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 )
 
 type Rand struct {
@@ -18,10 +18,7 @@ type Rand struct {
 }
 
 func New() *Rand {
-	return FromSeed(time.Now().UnixNano())
-}
-
-func FromSeed(seed int64) *Rand {
+	seed := time.Now().UnixNano()
 	return Quick(rand.New(rand.NewSource(seed)))
 }
 
@@ -46,31 +43,17 @@ func (r *Rand) IntRange(min, max int) int {
 	return min + r.rand.Intn(max-min)
 }
 
-// Rune returns a rune from [start,stop] e.g. 'a', 'z'
-func (r *Rand) Rune(start, stop rune) rune {
-	return rune(r.IntRange(int(start), int(stop)+1))
-}
-
 // Alpha returns a random string of len(n) with azAZ chars.
 func (r *Rand) Alpha(n int) string {
-	return r.String(n, alpha)
+	return r.string(n, alphaC)
 }
 
-// Letters returns a random string of n runes with alpha and a selection of utf8 letters.
-func (r *Rand) Letters(n int) string {
-	return r.String(n, letters)
-}
+func (r *Rand) string(n int, choices *utf8string.String) string {
+	l := choices.RuneCount()
 
-func (r *Rand) String(n int, chars string) string {
-	l := utf8.RuneCountInString(chars)
-	runes := make([]rune, l)
-	for i, r := range chars {
-		runes[i] = r
+	out := make([]rune, n)
+	for i := 0; i < n; i++ {
+		out[i] = choices.At(r.rand.Intn(l))
 	}
-
-	var b bytes.Buffer
-	for i := 0; i < l; i++ {
-		b.WriteRune(runes[r.rand.Intn(l)])
-	}
-	return b.String()
+	return string(out)
 }
