@@ -37,6 +37,7 @@ func main() {
 	opts := parseFlags()
 	g := lparse.NewGenerator(&opts.Config)
 	g.UseUnicode = false
+
 	for range time.Tick(opts.Rate) {
 		fmt.Println(g.RandMsg())
 	}
