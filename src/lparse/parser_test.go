@@ -18,6 +18,7 @@ func newParser(f string) *Parser {
 }
 
 func TestParserExample(t *testing.T) {
+	t.Parallel()
 	assert := require.New(t)
 	p := newParser(DefaultLogFormat)
 
@@ -35,6 +36,7 @@ func TestParserExample(t *testing.T) {
 }
 
 func TestParserFormat(t *testing.T) {
+	t.Parallel()
 	// swapped ident and remote
 	assert := require.New(t)
 	p := newParser(`{ident} {remote} {auth} [{time}] "{request}" {status} {size}`)

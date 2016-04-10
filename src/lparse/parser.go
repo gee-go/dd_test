@@ -80,6 +80,7 @@ func (p *Parser) Parse(l string) (*Message, error) {
 		// field names
 		switch r {
 		case '{':
+			fieldStart = i + 1
 			switch prev {
 			case '[':
 				p.end = ']'
@@ -92,10 +93,6 @@ func (p *Parser) Parse(l string) (*Message, error) {
 			if err := msg.set(p.config.LogFormat[fieldStart:i], p.parse()); err != nil {
 				return msg, err
 			}
-		}
-
-		if prev == '{' {
-			fieldStart = i
 		}
 
 		prev = r
