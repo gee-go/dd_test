@@ -11,20 +11,25 @@ type Scanner interface {
 }
 
 type FileScanner struct {
-	lines chan *Line
-	err   error
-	tail  *tail.Tail
+	lines  chan *Line
+	err    error
+	tail   *tail.Tail
+	config *Config
 }
 
-func NewFileScanner() *FileScanner {
+func NewFileScanner(config *Config) *FileScanner {
 	return &FileScanner{
-		lines: make(chan *Line),
+		lines:  make(chan *Line),
+		config: config,
 	}
 }
 
 func (s *FileScanner) Cleanup() {
-	s.tail.Stop()
-	s.tail.Cleanup()
+	if s.tail != nil {
+		s.tail.Stop()
+		s.tail.Cleanup()
+	}
+
 }
 
 func (s *FileScanner) Line() <-chan *Line {
@@ -49,7 +54,7 @@ func (s *FileScanner) Tail(fn string) {
 		return
 	}
 
-	p := New(NewConfig())
+	p := New(s.config)
 	for line := range s.tail.Lines {
 		if line.Err != nil {
 			s.lines <- &Line{Err: line.Err}

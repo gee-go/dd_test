@@ -1,38 +1,10 @@
 package lparse
 
 import (
-	"bytes"
 	"fmt"
-	"math/rand"
-	"net/url"
-	"reflect"
-	"strconv"
 	"strings"
 	"time"
-	"unicode"
-
-	"github.com/gee-go/dd_test/src/randutil"
 )
-
-func randURI(r *randutil.Rand) string {
-	var path bytes.Buffer
-
-	// 1 to 5 path components
-	for i := 0; i < r.IntRange(1, 5); i++ {
-		path.WriteString("/")
-		path.WriteString(r.Alpha(r.Rand.Intn(6)))
-	}
-
-	u, _ := url.Parse(path.String())
-
-	// 0 - 5 random url params
-	for i := 0; i < r.Rand.Intn(6); i++ {
-		u.Query().Set(r.Alpha(r.IntRange(1, 5)), r.Alpha(r.IntRange(1, 5)))
-	}
-
-	return u.RequestURI()
-
-}
 
 // Message represents a single log line.
 type Message struct {
@@ -84,34 +56,4 @@ func (m *Message) set(f, s string) error {
 	}
 
 	return err
-}
-
-func randMessage(r *randutil.Rand) *Message {
-	auth := string(r.Unicode(unicode.L, rand.Intn(20)))
-
-	if len(auth) == 0 {
-		auth = "-"
-	}
-
-	// format then parse so it has the same precision as the parser
-	t, _ := time.Parse(DefaultTimeFormat, time.Now().Format(DefaultTimeFormat))
-
-	return &Message{
-		Remote: r.IPv4().String(),
-		Ident:  "-",
-		Auth:   auth,
-		Time:   t,
-		Method: r.SelectString("GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"),
-		URI:    randURI(r),
-		Proto:  "HTTP/1.0",
-		Status: r.SelectString("200", "400"),
-		Size:   strconv.Itoa(r.IntRange(1<<8, 1<<26)),
-	}
-}
-
-// Generate a random message for using the testing/quick package
-func (*Message) Generate(rand *rand.Rand, size int) reflect.Value {
-	r := randutil.Quick(rand)
-
-	return reflect.ValueOf(randMessage(r))
 }

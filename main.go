@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,20 +10,30 @@ import (
 	"github.com/k0kubun/pp"
 )
 
+func parseFlags() *lparse.Config {
+	o := &lparse.Config{}
+	flag.StringVar(&o.LogFormat, "fmt", lparse.DefaultLogFormat, "a")
+	flag.StringVar(&o.TimeFormat, "time", lparse.DefaultTimeFormat, "a")
+
+	flag.Parse()
+
+	return o
+}
+
 func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	fn := "/usr/local/var/log/nginx/access.log"
-
-	s := lparse.NewFileScanner()
+	s := lparse.NewFileScanner(parseFlags())
 	go func() {
 		<-c
 		s.Cleanup()
 		os.Exit(1)
 	}()
 
-	go s.Tail(fn)
+	for _, fn := range flag.Args() {
+		go s.Tail(fn)
+	}
 
 	for l := range s.Line() {
 		pp.Println(l)
