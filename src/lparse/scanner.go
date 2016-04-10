@@ -11,20 +11,20 @@ type Scanner interface {
 }
 
 type FileScanner struct {
-	done  chan bool
 	lines chan *Line
 	err   error
+	tail  *tail.Tail
 }
 
 func NewFileScanner() *FileScanner {
 	return &FileScanner{
-		done:  make(chan bool),
 		lines: make(chan *Line),
 	}
 }
 
-func (s *FileScanner) stop() {
-	s.done <- true
+func (s *FileScanner) Cleanup() {
+	s.tail.Stop()
+	s.tail.Cleanup()
 }
 
 func (s *FileScanner) Line() <-chan *Line {
@@ -36,9 +36,7 @@ func (s *FileScanner) Err() error {
 }
 
 func (s *FileScanner) Tail(fn string) {
-	defer s.stop()
-
-	t, err := tail.TailFile(fn, tail.Config{
+	s.tail, s.err = tail.TailFile(fn, tail.Config{
 		Follow: true,
 		Logger: tail.DiscardingLogger,
 		Location: &tail.SeekInfo{
@@ -47,13 +45,12 @@ func (s *FileScanner) Tail(fn string) {
 		},
 	})
 
-	if err != nil {
-		s.err = err
+	if s.err != nil {
 		return
 	}
 
 	p := New(NewConfig())
-	for line := range t.Lines {
+	for line := range s.tail.Lines {
 		if line.Err != nil {
 			s.lines <- &Line{Err: line.Err}
 			continue
@@ -62,6 +59,6 @@ func (s *FileScanner) Tail(fn string) {
 		s.lines <- &Line{Msg: m, Err: err}
 	}
 
-	s.err = t.Wait()
+	s.err = s.tail.Wait()
 	return
 }
