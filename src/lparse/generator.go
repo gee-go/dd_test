@@ -37,22 +37,26 @@ func NewGenerator(c *Config) *Generator {
 
 func (g *Generator) randURI() string {
 	r := g.r
-	var path bytes.Buffer
+	var u bytes.Buffer
 
 	// 1 to 5 path components
-	for i := 0; i < r.IntRange(1, 5); i++ {
-		path.WriteString("/")
-		path.WriteString(r.Alpha(r.Rand.Intn(6)))
+	for i := 0; i < r.IntRange(1, 6); i++ {
+		u.WriteString("/")
+		u.WriteString(r.Alpha(r.IntRange(1, 6)))
 	}
-
-	u, _ := url.Parse(path.String())
 
 	// 0 - 5 random url params
+	v := &url.Values{}
 	for i := 0; i < r.Rand.Intn(6); i++ {
-		u.Query().Set(r.Alpha(r.IntRange(1, 5)), r.Alpha(r.IntRange(1, 5)))
+		v.Set(r.Alpha(r.IntRange(1, 5)), r.Alpha(r.IntRange(1, 5)))
 	}
 
-	return u.RequestURI()
+	if p := v.Encode(); len(p) > 0 {
+		u.WriteString("?")
+		u.WriteString(p)
+	}
+
+	return u.String()
 }
 
 func (g *Generator) randAuth(maxLen int) string {
