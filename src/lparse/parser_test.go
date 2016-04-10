@@ -1,14 +1,10 @@
 package lparse
 
 import (
-	"reflect"
+	"fmt"
 	"testing"
-
-	"github.com/k0kubun/pp"
-	"github.com/stretchr/testify/require"
+	"time"
 )
-
-const exampleLine = `127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`
 
 func newParser(f string) *Parser {
 	c := NewConfig()
@@ -18,55 +14,62 @@ func newParser(f string) *Parser {
 
 func TestParserExample(t *testing.T) {
 	t.Parallel()
-	assert := require.New(t)
-	p := newParser(DefaultLogFormat)
+	tc, a := newTestCase(t)
 
-	m, err := p.Parse(exampleLine)
-	assert.NoError(err)
-	assert.Equal(m.Remote, "127.0.0.1")
-	assert.Equal(m.Ident, "-")
-	assert.Equal(m.Auth, "frank")
-	assert.Equal(m.Time.Year(), 2000)
-	assert.Equal(m.Method, "GET")
-	assert.Equal(m.URI, "/apache_pb.gif")
-	assert.Equal(m.Proto, "HTTP/1.0")
-	assert.Equal(m.Status, "200")
-	assert.Equal(m.Size, "2326")
+	m, err := tc.p.Parse(ExampleLogLine)
+	a.NoError(err)
+	a.Equal(m.Remote, "127.0.0.1")
+	a.Equal(m.Ident, "-")
+	a.Equal(m.Auth, "frank")
+	a.Equal(m.Time.Year(), 2000)
+	a.Equal(m.Method, "GET")
+	a.Equal(m.URI, "/apache_pb.gif")
+	a.Equal(m.Proto, "HTTP/1.0")
+	a.Equal(m.Status, "200")
+	a.Equal(m.Size, "2326")
 }
 
 func TestParserFormat(t *testing.T) {
 	t.Parallel()
 	// swapped ident and remote
-	assert := require.New(t)
-	p := newParser(`{ident} {remote} {auth} [{time}] "{request}" {status} {size}`)
-	m, err := p.Parse(exampleLine)
-	assert.NoError(err)
-	assert.Equal(m.Ident, "127.0.0.1")
-	assert.Equal(m.Remote, "-")
+	tc, a := newTestCase(t, `{ident} {remote} {auth} [{time}] "{request}" {status} {size}`)
+
+	m := tc.MustParse(ExampleLogLine)
+	a.Equal(m.Ident, "127.0.0.1")
+	a.Equal(m.Remote, "-")
 }
 
-func BenchmarkParser(b *testing.B) {
-	p := newParser(DefaultLogFormat)
+// TODO
+// func TestParserFormatStrange(t *testing.T) {
+// 	// starts with time
+// 	t.Parallel()
+// 	tc, _ := newTestCase(t, `[{time}]`)
+// 	v := time.Now()
 
-	for i := 0; i < b.N; i++ {
-		p.Parse(exampleLine)
-	}
+// 	tc.MustParse(fmt.Sprintf("[%s]", v.Format(tc.c.TimeFormat)))
+// }
+
+func TestParserError(t *testing.T) {
+	t.Parallel()
+	tc, a := newTestCase(t, `{ident} [{time}]`)
+
+	// make sure it works.
+	tc.MustParse(fmt.Sprintf("- [%s]", time.Now().Format(tc.c.TimeFormat)))
+
+	_, err := tc.p.Parse("- [abc]")
+	a.Error(err)
+	a.Equal("abc", err.(*time.ParseError).Value)
 }
 
 func TestRandomMessages(t *testing.T) {
 	t.Parallel()
-	p := newParser(DefaultLogFormat)
-	g := NewGenerator(p.config)
+	tc, a := newTestCase(t)
+
 	for i := 0; i < 1000; i++ {
-		m := g.RandMsg()
-		pm, err := p.Parse(m.String())
-		if err != nil {
-			t.Error(err)
-		}
-		if !reflect.DeepEqual(m, pm) {
-			pp.Println(m, pm)
-			t.Fatalf("%v %v", m, pm)
-		}
+		m := tc.g.RandMsg()
+		pm := tc.MustParse(m.String())
+
+		a.Equal(m, pm)
 
 	}
 }

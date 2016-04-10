@@ -11,6 +11,8 @@ import (
 	"github.com/gee-go/dd_test/src/randutil"
 )
 
+const ExampleLogLine = `127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`
+
 // A Generator is used to create random messages.
 type Generator struct {
 	c *Config
@@ -75,15 +77,36 @@ func (g *Generator) randAuth(maxLen int) string {
 	return auth
 }
 
+func (g *Generator) time(t time.Time) time.Time {
+	// parse and format to have correct accuracy
+	out, _ := time.Parse(g.c.TimeFormat, t.Format(g.c.TimeFormat))
+	return out
+}
+
+// TestMsg always returns a message equivalent to ExampleLogLine.
+func (g *Generator) TestMsg() *Message {
+	t, _ := time.Parse(DefaultTimeFormat, "10/Oct/2000:13:55:36 -0700")
+	return &Message{
+		Remote: "127.0.0.1",
+		Ident:  "-",
+		Auth:   "frank",
+		Time:   g.time(t),
+		Method: "GET",
+		URI:    "/apache_pb.gif",
+		Proto:  "HTTP/1.0",
+		Status: "200",
+		Size:   "2326",
+	}
+}
+
 // RandMsg creates a random Message
 func (g *Generator) RandMsg() *Message {
-	t, _ := time.Parse(g.c.TimeFormat, time.Now().Format(g.c.TimeFormat))
 
 	return &Message{
 		Remote: g.r.IPv4().String(),
 		Ident:  "-",
 		Auth:   g.randAuth(20),
-		Time:   t,
+		Time:   g.time(time.Now()),
 		Method: g.r.SelectString("GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"),
 		URI:    g.randURI(),
 		Proto:  "HTTP/1.0",
