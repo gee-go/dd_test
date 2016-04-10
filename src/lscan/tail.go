@@ -1,23 +1,23 @@
-package lparse
+package lscan
 
 import (
 	"os"
 
+	"github.com/gee-go/dd_test/src/lparse"
 	"github.com/hpcloud/tail"
 )
 
-type Scanner interface {
-	Line() <-chan *Message
+type TailScanner struct {
 }
 
 type FileScanner struct {
 	lines  chan *Line
 	err    error
 	tail   *tail.Tail
-	config *Config
+	config *lparse.Config
 }
 
-func NewFileScanner(config *Config) *FileScanner {
+func NewFileScanner(config *lparse.Config) *FileScanner {
 	return &FileScanner{
 		lines:  make(chan *Line),
 		config: config,
@@ -54,7 +54,7 @@ func (s *FileScanner) Tail(fn string) {
 		return
 	}
 
-	p := New(s.config)
+	p := lparse.New(s.config)
 	for line := range s.tail.Lines {
 		if line.Err != nil {
 			s.lines <- &Line{Err: line.Err}

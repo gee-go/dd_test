@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/gee-go/dd_test/src/lparse"
+	"github.com/gee-go/dd_test/src/lscan"
 	"github.com/k0kubun/pp"
 )
 
@@ -24,7 +25,7 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	s := lparse.NewFileScanner(parseFlags())
+	s := lscan.NewFileScanner(parseFlags())
 	go func() {
 		<-c
 		s.Cleanup()
