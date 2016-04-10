@@ -5,6 +5,11 @@ import (
 	"unicode/utf8"
 )
 
+type Line struct {
+	Msg *Message
+	Err error
+}
+
 // Parser is used to convert lines to Message structs
 type Parser struct {
 	s   string
