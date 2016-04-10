@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gee-go/dd_test/src/randutil"
 	"github.com/k0kubun/pp"
 	"github.com/stretchr/testify/require"
 )
@@ -57,9 +56,9 @@ func BenchmarkParser(b *testing.B) {
 func TestRandomMessages(t *testing.T) {
 	t.Parallel()
 	p := newParser(DefaultLogFormat)
-
+	g := NewGenerator(p.config)
 	for i := 0; i < 1000; i++ {
-		m := randMessage(randutil.R)
+		m := g.RandMsg()
 		pm, err := p.Parse(m.String())
 		if err != nil {
 			t.Error(err)

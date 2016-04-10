@@ -11,7 +11,7 @@ import (
 )
 
 func parseFlags() *lparse.Config {
-	o := lparse.NewConfig()
+	o := &lparse.Config{}
 	flag.StringVar(&o.LogFormat, "fmt", lparse.DefaultLogFormat, "a")
 	flag.StringVar(&o.TimeFormat, "time", lparse.DefaultTimeFormat, "a")
 
