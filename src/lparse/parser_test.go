@@ -1,7 +1,6 @@
 package lparse
 
 import (
-	"fmt"
 	"testing"
 	"time"
 )
@@ -52,9 +51,9 @@ func TestParserFormat(t *testing.T) {
 func TestParserError(t *testing.T) {
 	t.Parallel()
 	tc, a := newTestCase(t, `{ident} [{time}]`)
-
-	// make sure it works.
-	tc.MustParse(fmt.Sprintf("- [%s]", time.Now().Format(tc.c.TimeFormat)))
+	m := tc.g.TestMsg()
+	line := m.Format(tc.c.LogFormat)
+	tc.MustParse(line)
 
 	_, err := tc.p.Parse("- [abc]")
 	a.Error(err)

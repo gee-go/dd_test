@@ -1,6 +1,7 @@
 package lparse
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"time"
@@ -19,11 +20,52 @@ type Message struct {
 	Size   string
 }
 
+func (m *Message) get(f string) string {
+	switch f {
+	case "remote":
+		return m.Remote
+	case "ident":
+		return m.Ident
+	case "auth":
+		return m.Auth
+	case "time":
+		return m.Time.Format(DefaultTimeFormat)
+	case "request":
+		return strings.Join([]string{m.Method, m.URI, m.Proto}, " ")
+	case "status":
+		return m.Status
+	case "size":
+		return m.Size
+	default:
+
+	}
+
+	return "<err>"
+}
+
+// Format writes the message in the given format
+func (m *Message) Format(format string) string {
+	var b bytes.Buffer
+	fieldStart := -1
+	for i, r := range format {
+		switch r {
+		case '{':
+			fieldStart = i + 1
+		case '}':
+			b.WriteString(m.get(format[fieldStart:i]))
+			fieldStart = -1
+		default:
+			if fieldStart == -1 {
+				b.WriteRune(r)
+			}
+		}
+	}
+
+	return b.String()
+}
+
 func (m *Message) String() string {
-	t := fmt.Sprintf("[%s]", m.Time.Format(DefaultTimeFormat))
-	req := fmt.Sprintf(`"%s %s %s"`, m.Method, m.URI, m.Proto)
-	parts := []string{m.Remote, m.Ident, m.Auth, t, req, m.Status, m.Size}
-	return strings.Join(parts, " ")
+	return m.Format(DefaultLogFormat)
 }
 
 func (m *Message) set(f, s string) error {
