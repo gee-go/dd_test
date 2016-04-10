@@ -11,7 +11,10 @@ import (
 	"github.com/gee-go/dd_test/src/randutil"
 )
 
-const ExampleLogLine = `127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`
+const (
+	ExampleLogLine        = `127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`
+	ExampleLogLineUnicode = `127.0.0.1 - 日a本b語ç日ð本Ê語þ日¥本¼語i日© [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`
+)
 
 // A Generator is used to create random messages.
 type Generator struct {
