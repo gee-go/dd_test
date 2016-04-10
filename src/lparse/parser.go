@@ -1,4 +1,4 @@
-package main
+package lparse
 
 import (
 	"unicode"
@@ -8,13 +8,14 @@ import (
 // Parser is used to convert lines to Message structs
 type Parser struct {
 	s   string
-	f   string
 	pos int
 	end rune
+
+	config *Config
 }
 
-func NewParser(f string) *Parser {
-	return &Parser{f: f}
+func New(c *Config) *Parser {
+	return &Parser{config: c}
 }
 
 // parseUntil scans through the log line util the fn returns true.
@@ -28,7 +29,7 @@ func (p *Parser) parseUntil(fn func(rune) bool) string {
 
 		if fn(r) {
 			v = p.s[p.pos:i]
-			p.pos = i + 1
+			p.pos = i + w
 			break
 		}
 
@@ -44,7 +45,7 @@ func (p *Parser) parseUntil(fn func(rune) bool) string {
 		r, w = utf8.DecodeRuneInString(p.s[i:])
 
 		if r == ' ' || r == ']' || r == '"' || r == '[' || unicode.IsSpace(r) {
-			p.pos++
+			p.pos += w
 		} else {
 			return v
 		}
@@ -75,7 +76,7 @@ func (p *Parser) Parse(l string) (*Message, error) {
 	prev := ' '
 	msg := &Message{}
 
-	for i, r := range p.f {
+	for i, r := range p.config.LogFormat {
 		// field names
 		switch r {
 		case '{':
@@ -88,7 +89,7 @@ func (p *Parser) Parse(l string) (*Message, error) {
 				p.end = prev
 			}
 		case '}':
-			if err := msg.set(p.f[fieldStart:i], p.parse()); err != nil {
+			if err := msg.set(p.config.LogFormat[fieldStart:i], p.parse()); err != nil {
 				return msg, err
 			}
 		}

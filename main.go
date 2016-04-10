@@ -1,21 +1,22 @@
 package main
 
-const (
-	// DefaultLogFormat is a format string for the common log format
-	DefaultLogFormat = `{remote} {ident} {auth} [{time}] "{request}" {status} {size}`
+import (
+	"fmt"
 
-	// DefaultTimeFormat is the default format string used to parse timestamps
-	DefaultTimeFormat = "02/Jan/2006:15:04:05 -0700"
+	"github.com/gee-go/dd_test/src/lparse"
+	"github.com/hpcloud/tail"
+	"github.com/k0kubun/pp"
 )
 
-type Options struct {
-	LogFormat  string
-	TimeFormat string
-}
+func main() {
+	t, err := tail.TailFile("/usr/local/var/log/nginx/access.log", tail.Config{Follow: true})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-func NewOptions() *Options {
-	return &Options{
-		LogFormat:  DefaultLogFormat,
-		TimeFormat: DefaultTimeFormat,
+	p := lparse.New(lparse.NewConfig())
+	for line := range t.Lines {
+		pp.Println(p.Parse(line.Text))
 	}
 }
