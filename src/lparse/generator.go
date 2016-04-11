@@ -97,7 +97,7 @@ func (g *Generator) TestMsg() *Message {
 		Method: "GET",
 		URI:    "/apache_pb.gif",
 		Proto:  "HTTP/1.0",
-		Status: "200",
+		Status: 200,
 		Size:   "2326",
 	}
 }
@@ -113,7 +113,7 @@ func (g *Generator) RandMsg() *Message {
 		Method: g.r.SelectString("GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"),
 		URI:    g.randURI(),
 		Proto:  "HTTP/1.0",
-		Status: g.r.SelectString("200", "400", "201", "304", "401", "404", "500"),
+		Status: g.r.SelectInt(200, 400, 201, 304, 401, 404, 500),
 		Size:   strconv.Itoa(g.r.IntRange(1<<8, 1<<26)),
 	}
 }

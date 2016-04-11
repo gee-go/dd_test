@@ -24,7 +24,7 @@ func TestParserExample(t *testing.T) {
 	a.Equal(m.Method, "GET")
 	a.Equal(m.URI, "/apache_pb.gif")
 	a.Equal(m.Proto, "HTTP/1.0")
-	a.Equal(m.Status, "200")
+	a.Equal(m.Status, 200)
 	a.Equal(m.Size, "2326")
 }
 

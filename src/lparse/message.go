@@ -3,6 +3,7 @@ package lparse
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -16,7 +17,7 @@ type Message struct {
 	Method string
 	URI    string
 	Proto  string
-	Status string
+	Status int
 	Size   string
 }
 
@@ -33,7 +34,7 @@ func (m *Message) get(f string) string {
 	case "request":
 		return strings.Join([]string{m.Method, m.URI, m.Proto}, " ")
 	case "status":
-		return m.Status
+		return strconv.Itoa(m.Status)
 	case "size":
 		return m.Size
 	default:
@@ -90,7 +91,7 @@ func (m *Message) set(f, s string) error {
 		m.Proto = parts[2]
 
 	case "status":
-		m.Status = s
+		m.Status, err = strconv.Atoi(s)
 	case "size":
 		m.Size = s
 	default:
