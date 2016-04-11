@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/gee-go/dd_test/src/lparse"
 	"github.com/gee-go/dd_test/src/lscan"
-	"github.com/k0kubun/pp"
 )
 
 func parseFlags() *lparse.Config {
@@ -36,8 +36,15 @@ func main() {
 		go s.Tail(fn)
 	}
 
+	ms := lscan.NewMetric()
+
 	for l := range s.Line() {
-		pp.Println(l)
+		if l.Err != nil {
+			fmt.Println(l.Err)
+			continue
+		}
+
+		ms.HandleMsg(l.Msg)
 	}
 
 }

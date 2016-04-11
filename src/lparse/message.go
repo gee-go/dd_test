@@ -3,6 +3,7 @@ package lparse
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,27 @@ type Message struct {
 	Proto  string
 	Status int
 	Size   string
+}
+
+// EventName normalize's URI
+func (m *Message) EventName() string {
+	sc := 0
+	u, _ := url.Parse(m.URI)
+	u.RawQuery = ""
+
+	for i, r := range u.Path {
+		switch r {
+		case '/':
+			sc++
+		}
+
+		if sc > 1 {
+			u.Path = u.Path[:i]
+			break
+		}
+	}
+
+	return u.String()
 }
 
 func (m *Message) get(f string) string {
