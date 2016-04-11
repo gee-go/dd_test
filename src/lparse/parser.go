@@ -2,12 +2,12 @@ package lparse
 
 // Parser is used to convert lines to Message structs
 type Parser struct {
-	b      *Buffer
+	b      *buffer
 	config *Config
 }
 
 func New(c *Config) *Parser {
-	return &Parser{config: c, b: &Buffer{}}
+	return &Parser{config: c, b: &buffer{}}
 }
 
 // Parse converts a line to a message.

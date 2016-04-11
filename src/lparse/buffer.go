@@ -5,17 +5,17 @@ import (
 	"unicode/utf8"
 )
 
-type Buffer struct {
+type buffer struct {
 	s   string
 	pos int
 }
 
-func (b *Buffer) Init(s string) {
+func (b *buffer) Init(s string) {
 	b.s = s
 	b.pos = 0
 }
 
-func (b *Buffer) advanceUntil(end rune) string {
+func (b *buffer) advanceUntil(end rune) string {
 	var r rune
 	var v string
 
@@ -40,7 +40,7 @@ func (b *Buffer) advanceUntil(end rune) string {
 	return v
 }
 
-func (b *Buffer) skipDelim() {
+func (b *buffer) skipDelim() {
 	var r rune
 	for i, w := b.pos, 0; i < len(b.s); i += w {
 		r, w = utf8.DecodeRuneInString(b.s[i:])
