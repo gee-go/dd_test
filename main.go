@@ -2,13 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
-	"time"
 
 	"github.com/gee-go/dd_test/src/lparse"
 	"github.com/gee-go/dd_test/src/lscan"
@@ -23,35 +20,6 @@ func parseFlags() *lparse.Config {
 	flag.Parse()
 
 	return o
-}
-
-type MetricGroup struct {
-	count int
-	wTime time.Duration
-	mu    sync.Mutex
-}
-
-func NewMetricGroup(wTime time.Duration) *MetricGroup {
-	return &MetricGroup{wTime: wTime}
-}
-
-func start(s *lscan.TailScanner) {
-	tickChan := time.Tick(time.Second * 5)
-
-	ms := metric.New()
-
-	for {
-		select {
-		case <-tickChan:
-			for _, p := range ms.TopK(10) {
-				fmt.Println(p.ID, p.Count)
-			}
-
-		case m := <-s.MsgChan:
-			ms.HandleMsg(m)
-		}
-	}
-
 }
 
 func main() {
@@ -72,7 +40,9 @@ func main() {
 	}()
 
 	go s.Start()
-	go start(s)
+
+	g := metric.NewGroup()
+	go g.Start(s.MsgChan)
 
 	done := make(chan bool)
 

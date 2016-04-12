@@ -1,55 +1,79 @@
 package metric
 
 import (
-	"sync"
 	"time"
 
 	"github.com/gee-go/dd_test/src/lparse"
+	"github.com/k0kubun/pp"
 )
 
-type Window struct {
-	data [][]*lparse.Message
+type Counter struct {
+	Total  int
+	ByPage map[string]int
+}
 
-	mu      sync.Mutex
+func (c *Counter) Inc(page string) {
+	c.Total++
+	if _, found := c.ByPage[page]; !found {
+		c.ByPage[page] = 0
+	}
+
+	c.ByPage[page]++
+}
+
+func NewCounter() *Counter {
+	return &Counter{
+		ByPage: make(map[string]int),
+	}
+}
+
+type RollingCounter struct {
+	data []*Counter
+
 	current int
 }
 
-func NewWindow(size int) *Window {
-	return &Window{
-		data: make([][]*lparse.Message, size),
+func NewRollingCounter(size int) *RollingCounter {
+	return &RollingCounter{
+		data: make([]*Counter, size),
 	}
 }
 
-func (w *Window) Step() {
+func (w *RollingCounter) Step() {
 	// move current, and clear old
 	w.current = (w.current + 1) % len(w.data)
-	w.data[w.current] = w.data[w.current][:0]
+	w.data[w.current] = NewCounter()
 }
 
-func (w *Window) Insert(m *lparse.Message) {
-	w.data[w.current] = append(w.data[w.current], m)
-}
-
-type MetricStore struct {
-	windowDuration time.Duration
-	window         *Window
-}
-
-func NewMetric() *MetricStore {
-	return &MetricStore{
-		windowDuration: time.Second * 2,
-		window:         NewWindow(3),
+func (w *RollingCounter) Count(m *lparse.Message) {
+	c := w.data[w.current]
+	if c == nil {
+		c = NewCounter()
+		w.data[w.current] = c
 	}
+	c.Inc(m.EventName())
 }
 
-// func (ms *MetricStore) Start() {
-// 	for range time.Tick(ms.windowDuration) {
-// 		fmt.Println("tick", len(ms.window.Current()))
+type Group struct {
+	count10s *RollingCounter
+}
 
-// 		ms.window.Step()
-// 	}
-// }
+func (g *Group) Start(lines chan *lparse.Message) {
+	tick := time.Tick(5 * time.Second)
+	for {
+		select {
+		case m := <-lines:
+			g.count10s.Count(m)
+		case <-tick:
+			g.count10s.Step()
+			pp.Println(g.count10s)
+		}
+	}
 
-func (ms *MetricStore) HandleMsg(m *lparse.Message) {
-	ms.window.Insert(m)
+}
+
+func NewGroup() *Group {
+	return &Group{
+		count10s: NewRollingCounter(10),
+	}
 }
