@@ -1,4 +1,4 @@
-package lparse
+package ddlog
 
 // Parser is used to convert lines to Message structs
 type Parser struct {

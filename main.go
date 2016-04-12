@@ -7,15 +7,15 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gee-go/dd_test/src/lparse"
+	"github.com/gee-go/dd_test/ddlog"
 	"github.com/gee-go/dd_test/src/lscan"
 	"github.com/gee-go/dd_test/src/metric"
 )
 
-func parseFlags() *lparse.Config {
-	o := &lparse.Config{}
-	flag.StringVar(&o.LogFormat, "fmt", lparse.DefaultLogFormat, "a")
-	flag.StringVar(&o.TimeFormat, "time", lparse.DefaultTimeFormat, "a")
+func parseFlags() *ddlog.Config {
+	o := &ddlog.Config{}
+	flag.StringVar(&o.LogFormat, "fmt", ddlog.DefaultLogFormat, "a")
+	flag.StringVar(&o.TimeFormat, "time", ddlog.DefaultTimeFormat, "a")
 
 	flag.Parse()
 

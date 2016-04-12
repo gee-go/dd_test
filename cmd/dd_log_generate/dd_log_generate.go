@@ -6,11 +6,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/gee-go/dd_test/src/lparse"
+	"github.com/gee-go/dd_test/ddlog"
 )
 
 type Opts struct {
-	lparse.Config
+	ddlog.Config
 
 	// How often to send logs.
 	Rate time.Duration
@@ -18,8 +18,8 @@ type Opts struct {
 
 func parseFlags() *Opts {
 	o := &Opts{}
-	flag.StringVar(&o.LogFormat, "fmt", lparse.DefaultLogFormat, "a")
-	flag.StringVar(&o.TimeFormat, "time", lparse.DefaultTimeFormat, "a")
+	flag.StringVar(&o.LogFormat, "fmt", ddlog.DefaultLogFormat, "a")
+	flag.StringVar(&o.TimeFormat, "time", ddlog.DefaultTimeFormat, "a")
 	var rate string
 	flag.StringVar(&rate, "rate", "1s", "a")
 	flag.Parse()
@@ -35,7 +35,7 @@ func parseFlags() *Opts {
 
 func main() {
 	opts := parseFlags()
-	g := lparse.NewGenerator(&opts.Config)
+	g := ddlog.NewGenerator(&opts.Config)
 	g.UseUnicode = false
 
 	for range time.Tick(opts.Rate) {

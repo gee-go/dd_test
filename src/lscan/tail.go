@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gee-go/dd_test/src/lparse"
+	"github.com/gee-go/dd_test/ddlog"
 	"github.com/hpcloud/tail"
 )
 
 type TailScanner struct {
-	MsgChan chan *lparse.Message
+	MsgChan chan *ddlog.Message
 
 	t *tail.Tail
-	p *lparse.Parser
+	p *ddlog.Parser
 }
 
 func (s *TailScanner) Cleanup() {
@@ -38,7 +38,7 @@ func (s *TailScanner) Start() {
 	}
 }
 
-func Tail(fn string, config *lparse.Config) (*TailScanner, error) {
+func Tail(fn string, config *ddlog.Config) (*TailScanner, error) {
 	t, err := tail.TailFile(fn, tail.Config{
 		Follow: true,
 		Logger: tail.DiscardingLogger,
@@ -53,8 +53,8 @@ func Tail(fn string, config *lparse.Config) (*TailScanner, error) {
 	}
 
 	return &TailScanner{
-		MsgChan: make(chan *lparse.Message),
+		MsgChan: make(chan *ddlog.Message),
 		t:       t,
-		p:       lparse.New(config),
+		p:       ddlog.New(config),
 	}, nil
 }

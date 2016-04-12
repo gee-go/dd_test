@@ -1,4 +1,4 @@
-package lparse
+package ddlog
 
 const (
 	// DefaultLogFormat is a format string for the common log format

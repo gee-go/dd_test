@@ -3,7 +3,7 @@ package metric
 import (
 	"time"
 
-	"github.com/gee-go/dd_test/src/lparse"
+	"github.com/gee-go/dd_test/ddlog"
 	"github.com/k0kubun/pp"
 )
 
@@ -45,7 +45,7 @@ func (w *RollingCounter) Step() {
 	w.data[w.current] = NewCounter()
 }
 
-func (w *RollingCounter) Count(m *lparse.Message) {
+func (w *RollingCounter) Count(m *ddlog.Message) {
 	c := w.data[w.current]
 	if c == nil {
 		c = NewCounter()
@@ -58,7 +58,7 @@ type Group struct {
 	count10s *RollingCounter
 }
 
-func (g *Group) Start(lines chan *lparse.Message) {
+func (g *Group) Start(lines chan *ddlog.Message) {
 	tick := time.Tick(5 * time.Second)
 	for {
 		select {

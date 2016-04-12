@@ -4,7 +4,7 @@ import (
 	"container/heap"
 	"sync"
 
-	"github.com/gee-go/dd_test/src/lparse"
+	"github.com/gee-go/dd_test/ddlog"
 )
 
 type Store struct {
@@ -13,7 +13,7 @@ type Store struct {
 	mu         sync.RWMutex
 }
 
-func (s *Store) HandleMsg(m *lparse.Message) {
+func (s *Store) HandleMsg(m *ddlog.Message) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

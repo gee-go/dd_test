@@ -1,4 +1,4 @@
-package lparse
+package ddlog
 
 import "testing"
 

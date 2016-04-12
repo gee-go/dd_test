@@ -1,12 +1,12 @@
 package lscan
 
-import "github.com/gee-go/dd_test/src/lparse"
+import "github.com/gee-go/dd_test/ddlog"
 
 type Scanner interface {
 	Line() <-chan *Line
 }
 
 type Line struct {
-	Msg *lparse.Message
+	Msg *ddlog.Message
 	Err error
 }

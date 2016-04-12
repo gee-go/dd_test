@@ -1,10 +1,11 @@
-package lparse
+package ddlog
 
 import (
 	"unicode"
 	"unicode/utf8"
 )
 
+//buffer a utility to aid in parsing log lines
 type buffer struct {
 	s   string
 	pos int
