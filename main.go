@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -24,28 +25,17 @@ func parseFlags() *lparse.Config {
 	return o
 }
 
-func main() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+type MetricGroup struct {
+	count int
+	wTime time.Duration
+	mu    sync.Mutex
+}
 
-	config := parseFlags()
+func NewMetricGroup(wTime time.Duration) *MetricGroup {
+	return &MetricGroup{wTime: wTime}
+}
 
-	s, err := lscan.Tail(flag.Args()[0], config)
-	if err != nil {
-		log.Fatal(err)
-	}
-	go func() {
-		<-c
-		s.Cleanup()
-		os.Exit(1)
-	}()
-
-	go s.Start()
-
-	// window := lscan.NewWindow(3)
-
-	// windowSize := time.Second * 10
-
+func start(s *lscan.TailScanner) {
 	tickChan := time.Tick(time.Second * 5)
 
 	ms := metric.New()
@@ -62,5 +52,33 @@ func main() {
 		}
 	}
 
-	// <-done
+}
+
+func main() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	config := parseFlags()
+
+	s, err := lscan.Tail(flag.Args()[0], config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		<-c
+		s.Cleanup()
+		os.Exit(1)
+	}()
+
+	go s.Start()
+	go start(s)
+
+	done := make(chan bool)
+
+	// window := lscan.NewWindow(3)
+
+	// windowSize := time.Second * 10
+
+	<-done
 }
