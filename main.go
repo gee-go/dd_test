@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/VividCortex/ewma"
 	"github.com/gee-go/dd_test/src/lparse"
 	"github.com/gee-go/dd_test/src/lscan"
+	"github.com/gee-go/dd_test/src/metric"
 )
 
 func parseFlags() *lparse.Config {
@@ -46,19 +46,19 @@ func main() {
 
 	// windowSize := time.Second * 10
 
-	tickChan := time.Tick(time.Second * 1)
-	count := 0
-	avg := ewma.NewMovingAverage()
+	tickChan := time.Tick(time.Second * 5)
+
+	ms := metric.New()
+
 	for {
 		select {
 		case <-tickChan:
+			for _, p := range ms.TopK(10) {
+				fmt.Println(p.ID, p.Count)
+			}
 
-			avg.Add(float64(count))
-			fmt.Println(avg.Value())
-			count = 0
-		case <-s.MsgChan:
-			// fmt.Println(m.Remote)
-			count++
+		case m := <-s.MsgChan:
+			ms.HandleMsg(m)
 		}
 	}
 
