@@ -3,10 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/VividCortex/ewma"
 	"github.com/gee-go/dd_test/src/lparse"
 	"github.com/gee-go/dd_test/src/lscan"
 )
@@ -25,26 +28,39 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	s := lscan.NewFileScanner(parseFlags())
+	config := parseFlags()
+
+	s, err := lscan.Tail(flag.Args()[0], config)
+	if err != nil {
+		log.Fatal(err)
+	}
 	go func() {
 		<-c
 		s.Cleanup()
 		os.Exit(1)
 	}()
 
-	for _, fn := range flag.Args() {
-		go s.Tail(fn)
-	}
+	go s.Start()
 
-	ms := lscan.NewMetric()
+	// window := lscan.NewWindow(3)
 
-	for l := range s.Line() {
-		if l.Err != nil {
-			fmt.Println(l.Err)
-			continue
+	// windowSize := time.Second * 10
+
+	tickChan := time.Tick(time.Second * 1)
+	count := 0
+	avg := ewma.NewMovingAverage()
+	for {
+		select {
+		case <-tickChan:
+
+			avg.Add(float64(count))
+			fmt.Println(avg.Value())
+			count = 0
+		case <-s.MsgChan:
+			// fmt.Println(m.Remote)
+			count++
 		}
-
-		ms.HandleMsg(l.Msg)
 	}
 
+	// <-done
 }

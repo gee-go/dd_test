@@ -1,6 +1,7 @@
 package lscan
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/gee-go/dd_test/src/lparse"
@@ -8,40 +9,37 @@ import (
 )
 
 type TailScanner struct {
+	MsgChan chan *lparse.Message
+
+	t *tail.Tail
+	p *lparse.Parser
 }
 
-type FileScanner struct {
-	lines  chan *Line
-	err    error
-	tail   *tail.Tail
-	config *lparse.Config
+func (s *TailScanner) Cleanup() {
+	s.t.Stop()
+	s.t.Cleanup()
 }
 
-func NewFileScanner(config *lparse.Config) *FileScanner {
-	return &FileScanner{
-		lines:  make(chan *Line),
-		config: config,
+func (s *TailScanner) Start() {
+	defer close(s.MsgChan)
+	for line := range s.t.Lines {
+		if line.Err != nil {
+			fmt.Println(line.Err)
+			continue
+		}
+
+		m, err := s.p.Parse(line.Text)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		s.MsgChan <- m
 	}
 }
 
-func (s *FileScanner) Cleanup() {
-	if s.tail != nil {
-		s.tail.Stop()
-		s.tail.Cleanup()
-	}
-
-}
-
-func (s *FileScanner) Line() <-chan *Line {
-	return s.lines
-}
-
-func (s *FileScanner) Err() error {
-	return s.err
-}
-
-func (s *FileScanner) Tail(fn string) {
-	s.tail, s.err = tail.TailFile(fn, tail.Config{
+func Tail(fn string, config *lparse.Config) (*TailScanner, error) {
+	t, err := tail.TailFile(fn, tail.Config{
 		Follow: true,
 		Logger: tail.DiscardingLogger,
 		Location: &tail.SeekInfo{
@@ -50,20 +48,13 @@ func (s *FileScanner) Tail(fn string) {
 		},
 	})
 
-	if s.err != nil {
-		return
+	if err != nil {
+		return nil, err
 	}
 
-	p := lparse.New(s.config)
-	for line := range s.tail.Lines {
-		if line.Err != nil {
-			s.lines <- &Line{Err: line.Err}
-			continue
-		}
-		m, err := p.Parse(line.Text)
-		s.lines <- &Line{Msg: m, Err: err}
-	}
-
-	s.err = s.tail.Wait()
-	return
+	return &TailScanner{
+		MsgChan: make(chan *lparse.Message),
+		t:       t,
+		p:       lparse.New(config),
+	}, nil
 }

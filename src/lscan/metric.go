@@ -1,25 +1,60 @@
 package lscan
 
 import (
-	"log"
-	"os"
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/gee-go/dd_test/src/lparse"
-	"github.com/rcrowley/go-metrics"
 )
 
+type Window struct {
+	data [][]*lparse.Message
+
+	mu      sync.Mutex
+	current int
+}
+
+func NewWindow(size int) *Window {
+	return &Window{
+		data: make([][]*lparse.Message, size),
+	}
+}
+
+func (w *Window) Current() []*lparse.Message {
+	return w.data[w.current]
+}
+
+func (w *Window) Step() {
+	// move current, and clear old
+	w.current = (w.current + 1) % len(w.data)
+	w.data[w.current] = w.data[w.current][:0]
+}
+
+func (w *Window) Insert(m *lparse.Message) {
+	w.data[w.current] = append(w.data[w.current], m)
+}
+
 type MetricStore struct {
-	count metrics.Counter
+	windowDuration time.Duration
+	window         *Window
 }
 
 func NewMetric() *MetricStore {
-	ms := &MetricStore{}
-	go metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
-	return ms
+	return &MetricStore{
+		windowDuration: time.Second * 2,
+		window:         NewWindow(3),
+	}
+}
+
+func (ms *MetricStore) Start() {
+	for range time.Tick(ms.windowDuration) {
+		fmt.Println("tick", len(ms.window.Current()))
+
+		ms.window.Step()
+	}
 }
 
 func (ms *MetricStore) HandleMsg(m *lparse.Message) {
-	metrics.GetOrRegisterCounter("cc", metrics.DefaultRegistry).Inc(1)
-	// ms.sink.IncrCounter([]string{"count"}, 1)
+	ms.window.Insert(m)
 }
