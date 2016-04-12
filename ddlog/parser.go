@@ -42,5 +42,4 @@ func (p *Parser) Parse(l string) (*Message, error) {
 	}
 
 	return msg, nil
-
 }

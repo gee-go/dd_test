@@ -11,6 +11,7 @@ const (
 type Config struct {
 	LogFormat  string
 	TimeFormat string
+	Filename   string
 }
 
 func NewConfig() *Config {

@@ -10,99 +10,82 @@ import (
 	"time"
 
 	"github.com/gee-go/dd_test/ddlog"
-	"github.com/gee-go/dd_test/src/lscan"
-	"github.com/k0kubun/pp"
+	"github.com/hpcloud/tail"
 )
 
 func parseFlags() *ddlog.Config {
 	o := &ddlog.Config{}
 	flag.StringVar(&o.LogFormat, "fmt", ddlog.DefaultLogFormat, "a")
 	flag.StringVar(&o.TimeFormat, "time", ddlog.DefaultTimeFormat, "a")
-
 	flag.Parse()
+
+	args := flag.Args()
+	if len(args) == 0 {
+		log.Fatal("Need a file")
+	}
+
+	o.Filename = args[0]
 
 	return o
 }
 
-type Bucket struct {
-	Time time.Time
-
-	Count       int
-	CountByPage map[string]int
-}
-
-func (b *Bucket) Add(m *ddlog.Message) {
-	b.Count++
-	name := m.EventName()
-	if _, found := b.CountByPage[name]; !found {
-		b.CountByPage[name] = 1
-	} else {
-		b.CountByPage[name]++
-	}
-}
-
-func newBucket(mt time.Time) *Bucket {
-	return &Bucket{
-		CountByPage: make(map[string]int),
-		Time:        mt,
-	}
-}
-
-func BucketMsgChan(msgChan <-chan *ddlog.Message, bw time.Duration) chan *Bucket {
-	out := make(chan *Bucket)
-
-	go func() {
-		var b *Bucket
-
-		for m := range msgChan {
-			mt := m.Time.Truncate(bw)
-
-			if b == nil {
-				// first bucket
-				b = newBucket(mt)
-			} else if mt.After(b.Time) {
-				// new bucket
-				out <- b
-				b = newBucket(mt)
-			}
-
-			if mt.Equal(b.Time) {
-				// same bucket
-				b.Add(m)
-			} else {
-				// TODO - Handle case where log timestamps are not constantly increasing.
-				fmt.Println("Old line")
-			}
-
-		}
-		close(out)
-	}()
-
-	return out
-}
-
 func main() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
 	config := parseFlags()
 
-	s, err := lscan.Tail(flag.Args()[0], config)
+	// setup file tailer
+	fileTail, err := tail.TailFile(config.Filename, tail.Config{
+		Follow: true,
+		Logger: tail.DiscardingLogger,
+		Location: &tail.SeekInfo{
+			Offset: 0,
+			Whence: os.SEEK_END,
+		},
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// setup tail cleanup
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		<-c
-		s.Cleanup()
-		os.Exit(1)
+		<-signalChan
+		fileTail.Cleanup()
+		os.Exit(0)
 	}()
 
-	go s.Start()
+	// tail lines -> messages
+	msgChan := make(chan *ddlog.Message)
+	lineParser := ddlog.New(config)
+	go func() {
+		defer close(msgChan)
+		for line := range fileTail.Lines {
+			if line.Err != nil {
+				fmt.Println(line.Err)
+				continue
+			}
+			m, err := lineParser.Parse(line.Text)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			msgChan <- m
+		}
+	}()
 
-	bChan := BucketMsgChan(s.MsgChan, time.Second*1)
-	for b := range bChan {
-		pp.Println(b)
+	// messages -> metrics
+	metricStore := ddlog.NewMetricStore()
+	go metricStore.Start(msgChan)
+
+	tick10s := time.Tick(time.Second * 10)
+	tick2m := time.Tick(time.Minute * 2)
+
+	for {
+		select {
+		case <-tick10s:
+			metricStore.Print()
+		case <-tick2m:
+			fmt.Println("2min")
+		}
 	}
-
 }
