@@ -3,6 +3,8 @@ package ddlog
 import (
 	"fmt"
 	"time"
+
+	"github.com/gee-go/dd_test/ddlog/util"
 )
 
 // MetricBucket stores aggregated events over a period of time.
@@ -22,6 +24,10 @@ func (b *MetricBucket) Add(m *Message) {
 	} else {
 		b.CountByPage[name]++
 	}
+}
+
+func (b *MetricBucket) TopK(k int) []string {
+	return util.TopK(b.CountByPage, k)
 }
 
 func NewMetricBucket(mt time.Time) *MetricBucket {

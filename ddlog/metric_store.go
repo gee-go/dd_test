@@ -1,10 +1,9 @@
 package ddlog
 
 import (
+	"fmt"
 	"sync"
 	"time"
-
-	"github.com/k0kubun/pp"
 )
 
 type MetricStore struct {
@@ -21,7 +20,11 @@ func (s *MetricStore) Print() {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	pp.Println(s)
+	fmt.Println("Metric Print:")
+	for _, p := range s.TopK(5) {
+		fmt.Println(p, s.CountByPage[p])
+	}
+
 }
 
 // Start calculating aggregate stats from the msgChan, messages are rolled up
