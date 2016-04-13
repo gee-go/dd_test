@@ -27,11 +27,54 @@ func TestCountRing(t *testing.T) {
 	a.Equal(3, ring.Sum())
 }
 
-func TestCountRingTick(t *testing.T) {
+func TestCountRingOldMessages(t *testing.T) {
 	a := require.New(t)
 	ring := NewCountRing(time.Second, 3)
+	start := time.Now().Round(ring.dtInterval)
+
+	incAt := func(step int, by int) bool {
+		t := start.Add(time.Second * time.Duration(step))
+		return ring.Inc(t, by)
+	}
+
+	incAt(0, 1)
+	incAt(1, 2)
+	incAt(2, 3)
+
+	a.Equal([]int{1, 2, 3}, ring.ring)
+	a.Equal(2, ring.i)
+
+	// Ago
+	a.Equal(3, ring.Ago(0))
+	a.Equal(2, ring.Ago(1))
+	a.Equal(1, ring.Ago(2))
+	a.Equal(-1, ring.Ago(3))
+
+	a.True(incAt(0, 1))
+	a.True(incAt(1, 2))
+	a.True(incAt(2, 3))
+	a.Equal([]int{2, 4, 6}, ring.ring)
+	a.Equal(2, ring.i)
+
+	a.True(incAt(3, 3))
+	a.Equal([]int{3, 4, 6}, ring.ring)
+	a.Equal(0, ring.i)
+
+	a.True(incAt(2, 3))
+	a.Equal([]int{3, 4, 9}, ring.ring)
+	a.Equal(0, ring.i)
+
+	// too far ago
+	a.False(incAt(0, 3))
+	a.Equal([]int{3, 4, 9}, ring.ring)
+	a.Equal(0, ring.i)
+}
+
+func TestCountRingTick(t *testing.T) {
+	a := require.New(t)
 	mclock := clock.NewMock()
-	ring.clock = mclock
+	ring := NewCountRing(time.Second, 3, mclock)
+
 	start := ring.clock.Now().Round(ring.dtInterval)
 	ring.Inc(start, 1)
 	a.Equal([]int{1, 0, 0}, ring.ring)

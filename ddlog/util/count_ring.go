@@ -51,6 +51,25 @@ func (r *CountRing) Tick() {
 	}
 }
 
+// Return the value i buckets from current, returns -1
+func (r *CountRing) Ago(buckets int) int {
+	if buckets >= len(r.ring) {
+		return -1
+	}
+
+	return r.ring[r.agoI(buckets)]
+}
+
+func (r *CountRing) agoI(buckets int) int {
+	j := r.i - buckets
+
+	if j >= 0 {
+		return j
+	}
+
+	return len(r.ring) + j
+}
+
 // Sum of the data.
 func (r *CountRing) Sum() int {
 
@@ -80,8 +99,15 @@ func (r *CountRing) Inc(at time.Time, by int) bool {
 		r.advance(dt)
 		r.ring[r.i] += by
 	} else {
-		// TODO - Allow back filling buckets that still are availible.
-		return false
+		// check if we can backfill.
+		ago := int(r.current.Sub(t) / r.dtInterval)
+
+		if ago >= len(r.ring) {
+			// too far back, discard.
+			return false
+		}
+		// return false
+		r.ring[r.agoI(ago)] += by
 	}
 
 	return true

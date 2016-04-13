@@ -33,33 +33,6 @@ func newMonitorTestCase() *monitorTestCase {
 	}
 }
 
-func TestMonitorTick(t *testing.T) {
-	t.Parallel()
-	a := require.New(t)
-	tc := newMonitorTestCase()
-
-	m, g := tc.m, tc.g
-	msgChan := make(chan *Message)
-
-	// Create 2 messages per second for 2 minutes
-	total := 240
-	tc.mclock.Set(time.Now().Round(time.Second))
-	go func() {
-		for i := 0; i < 120; i++ {
-			tc.Tick(time.Second)
-			msgChan <- g.RandMsg()
-			msgChan <- g.RandMsg()
-		}
-		tc.Tick(time.Second)
-		m.Stop()
-	}()
-
-	m.Start(msgChan)
-
-	a.Equal(total, m.WindowCount())
-
-}
-
 func TestMonitorStart(t *testing.T) {
 	t.Parallel()
 	a := require.New(t)
