@@ -3,7 +3,7 @@ package ddlog
 import (
 	"time"
 
-	"github.com/gee-go/dd_test/ddlog/util"
+	"github.com/gee-go/ddlog/ddlog/util"
 )
 
 type PageCount struct {

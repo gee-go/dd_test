@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
-	"github.com/gee-go/dd_test/ddlog/util"
+	"github.com/gee-go/ddlog/ddlog/util"
 )
 
 type Monitor struct {

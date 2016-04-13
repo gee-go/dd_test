@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/gee-go/dd_test/ddlog/randutil"
+	"github.com/gee-go/ddlog/ddlog/randutil"
 )
 
 const (

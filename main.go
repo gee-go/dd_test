@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/gee-go/dd_test/ddlog"
+	"github.com/gee-go/ddlog/ddlog"
 	"github.com/hpcloud/tail"
 	"github.com/olekukonko/tablewriter"
 )

@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/gee-go/dd_test/ddlog"
+	"github.com/gee-go/ddlog/ddlog"
 )
 
 type Opts struct {
