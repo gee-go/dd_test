@@ -7,14 +7,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/gee-go/dd_test/ddlog"
 	"github.com/hpcloud/tail"
 )
 
 func parseFlags() *ddlog.Config {
-	o := &ddlog.Config{}
+	o := ddlog.NewConfig()
 	flag.StringVar(&o.LogFormat, "fmt", ddlog.DefaultLogFormat, "a")
 	flag.StringVar(&o.TimeFormat, "time", ddlog.DefaultTimeFormat, "a")
 	flag.Parse()
@@ -73,19 +72,22 @@ func main() {
 		}
 	}()
 
-	// messages -> metrics
-	metricStore := ddlog.NewMetricStore()
+	// process messages
+	metricStore := ddlog.NewMetricStore(config)
 	go metricStore.Start(msgChan)
 
-	tick10s := time.Tick(time.Second * 10)
-	tick2m := time.Tick(time.Minute * 2)
+	done := make(chan bool)
+	<-done
 
-	for {
-		select {
-		case <-tick10s:
-			metricStore.Print()
-		case <-tick2m:
-			fmt.Println("2min")
-		}
-	}
+	// tick10s := time.Tick(fastTickRate)
+	// tick2m := time.Tick(time.Minute * 2)
+
+	// for {
+	// 	select {
+	// 	case <-tick10s:
+	// 		metricStore.Print()
+	// 	case <-tick2m:
+	// 		fmt.Println("2min")
+	// 	}
+	// }
 }

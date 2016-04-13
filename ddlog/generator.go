@@ -2,6 +2,7 @@ package ddlog
 
 import (
 	"bytes"
+	"fmt"
 	"math/rand"
 	"net/url"
 	"strconv"
@@ -47,7 +48,7 @@ func (g *Generator) randURI() string {
 	// 1 to 5 path components
 	for i := 0; i < r.IntRange(1, 6); i++ {
 		u.WriteString("/")
-		u.WriteString(r.Alpha(r.IntRange(1, 6)))
+		u.WriteString(r.Alpha(r.IntRange(1, 3)))
 	}
 
 	// 0 - 5 random url params
@@ -100,6 +101,12 @@ func (g *Generator) TestMsg() *Message {
 		Status: 200,
 		Size:   "2326",
 	}
+}
+
+func (g *Generator) MsgWithPage(page string) *Message {
+	m := g.TestMsg()
+	m.URI = fmt.Sprintf("/%s", page)
+	return m
 }
 
 // RandMsg creates a random Message

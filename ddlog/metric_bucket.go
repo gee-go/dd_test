@@ -1,18 +1,31 @@
 package ddlog
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gee-go/dd_test/ddlog/util"
 )
 
+type PageCount struct {
+	Name  string
+	Count int
+}
+
 // MetricBucket stores aggregated events over a period of time.
 type MetricBucket struct {
-	StartTime time.Time
+	Duration time.Duration
 
 	Count       int
 	CountByPage map[string]int
+}
+
+// Copy creates a copy of this bucket
+func (b *MetricBucket) Copy() *MetricBucket {
+	out := NewMetricBucket()
+
+	out.Merge(b)
+
+	return out
 }
 
 // Add the message to the aggregate. Not thread safe!
@@ -26,46 +39,33 @@ func (b *MetricBucket) Add(m *Message) {
 	}
 }
 
-func (b *MetricBucket) TopK(k int) []string {
-	return util.TopK(b.CountByPage, k)
-}
+// Merge modifies this bucket
+func (b *MetricBucket) Merge(in *MetricBucket) {
+	// TODO StartTime
+	b.Count += in.Count
+	b.Duration += in.Duration
 
-func NewMetricBucket(mt time.Time) *MetricBucket {
-	return &MetricBucket{
-		CountByPage: make(map[string]int),
-		StartTime:   mt,
+	for page, count := range in.CountByPage {
+		b.CountByPage[page] += count
 	}
 }
 
-func MsgChanToBucket(msgChan <-chan *Message, aggInterval time.Duration) chan *MetricBucket {
-	out := make(chan *MetricBucket)
+func (b *MetricBucket) TopK(k int) []*PageCount {
+	keys := util.TopK(b.CountByPage, k)
 
-	go func() {
-		var b *MetricBucket
-
-		for m := range msgChan {
-			mt := m.Time.Truncate(aggInterval)
-
-			if b == nil {
-				// first bucket
-				b = NewMetricBucket(mt)
-			} else if mt.After(b.StartTime) {
-				// new bucket
-				out <- b
-				b = NewMetricBucket(mt)
-			}
-
-			if mt.Equal(b.StartTime) {
-				// same bucket
-				b.Add(m)
-			} else {
-				// TODO - Handle case where log timestamps are not constantly increasing.
-				fmt.Println("Old line")
-			}
-
-		}
-		close(out)
-	}()
+	var out []*PageCount
+	for _, page := range keys {
+		out = append(out, &PageCount{
+			Name:  page,
+			Count: b.CountByPage[page],
+		})
+	}
 
 	return out
+}
+
+func NewMetricBucket() *MetricBucket {
+	return &MetricBucket{
+		CountByPage: make(map[string]int),
+	}
 }
