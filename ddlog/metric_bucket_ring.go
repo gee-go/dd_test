@@ -1,9 +1,6 @@
 package ddlog
 
-import (
-	"fmt"
-	"time"
-)
+import "time"
 
 // a ring of recent metric buckets. Not thread safe!
 type metricBucketRing struct {
@@ -14,7 +11,7 @@ type metricBucketRing struct {
 }
 
 func newMetricBucketRing(batchInterval time.Duration, retainCount int) *metricBucketRing {
-	fmt.Println(retainCount)
+
 	rc := &metricBucketRing{
 		data:          make([]*MetricBucket, retainCount),
 		batchInterval: batchInterval,

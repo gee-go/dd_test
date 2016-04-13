@@ -14,16 +14,6 @@ func TestMetricStore(t *testing.T) {
 	config.FastTickDuration = 10 * time.Second
 	ms := NewMetricStore(config)
 	ms.clock = clock.NewMock()
-	g := NewGenerator(nil)
+	// g := NewGenerator(nil)
 
-	msgChan := make(chan *Message, 10)
-	for i := 0; i < 10; i++ {
-		msgChan <- g.RandMsg()
-	}
-
-	ms.Start(msgChan, func(e *MetricEvent) {
-
-	})
-
-	// alpha := alphaVal(1*time.Second, 2*time.Minute))
 }

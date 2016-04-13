@@ -2,13 +2,32 @@ package ddlog
 
 import (
 	"sync"
+	"time"
 
 	"github.com/benbjohnson/clock"
 )
 
+type Alert struct {
+	Start time.Time
+	End   time.Time
+	Count int
+	Done  bool
+}
+
+func (a *Alert) Copy() *Alert {
+	if a == nil {
+		return nil
+	}
+	return &Alert{
+		Start: a.Start,
+		End:   a.End,
+		Done:  a.Done,
+	}
+}
+
 type MetricEvent struct {
-	AlertBucket *MetricBucket
-	TopPages    []*PageCount
+	Alert    *Alert
+	TopPages []*PageCount
 }
 
 type MetricEventHandler func(e *MetricEvent)
@@ -24,6 +43,8 @@ type MetricStore struct {
 	msgChan        <-chan *Message
 	fastTicker     *clock.Ticker
 	metricEventFn  MetricEventHandler
+
+	alert *Alert
 }
 
 func NewMetricStore(config *Config) *MetricStore {
@@ -41,10 +62,34 @@ func (ms *MetricStore) step() {
 
 	ms.fastBucketRing.Step()
 
-	go ms.metricEventFn(&MetricEvent{
-		AlertBucket: ms.fastBucketRing.Merged(),
-		TopPages:    ms.allTimeBucket.TopK(5),
-	})
+	// alerts
+	alertBucket := ms.fastBucketRing.Merged()
+	var a *Alert
+
+	// new alert
+	if alertBucket.Count >= ms.config.AlertThreshold && ms.alert == nil {
+		ms.alert = &Alert{
+			Start: time.Now(),
+			Count: alertBucket.Count,
+		}
+		a = ms.alert.Copy()
+	}
+
+	// alert done
+	if alertBucket.Count < ms.config.AlertThreshold && ms.alert != nil {
+		a = ms.alert.Copy()
+		a.Done = true
+		a.End = time.Now()
+		ms.alert = nil
+	}
+
+	evt := &MetricEvent{
+		Alert:    a,
+		TopPages: ms.allTimeBucket.TopK(5),
+	}
+
+	go ms.metricEventFn(evt)
+
 }
 
 func (ms *MetricStore) Start(msgChan <-chan *Message, handler MetricEventHandler) {

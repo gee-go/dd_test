@@ -23,8 +23,8 @@ func NewConfig() *Config {
 	return &Config{
 		LogFormat:        DefaultLogFormat,
 		TimeFormat:       DefaultTimeFormat,
-		FastTickDuration: time.Second * 1,
-		AlertDuration:    time.Second * 5,
+		FastTickDuration: time.Second * 10,
+		AlertDuration:    time.Minute * 2,
 		AlertThreshold:   100,
 	}
 }
