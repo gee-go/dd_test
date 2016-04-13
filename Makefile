@@ -10,6 +10,9 @@ bench:
 	go test -bench=. -benchmem ./...
 .PHONY: bench
 
+install:
+	go install ./cmd/...
+
 tools:
 	go get -u github.com/onsi/ginkgo/...
 	go get -u github.com/tools/godep
