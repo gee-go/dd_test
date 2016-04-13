@@ -2,7 +2,6 @@ package ddlog
 
 import (
 	"bytes"
-	"fmt"
 	"math/rand"
 	"net/url"
 	"strconv"
@@ -105,7 +104,7 @@ func (g *Generator) TestMsg() *Message {
 
 func (g *Generator) MsgWithPage(page string) *Message {
 	m := g.TestMsg()
-	m.URI = fmt.Sprintf("/%s", page)
+	m.URI = page
 	return m
 }
 

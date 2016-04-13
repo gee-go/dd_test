@@ -17,11 +17,16 @@ type CountRing struct {
 	clock       clock.Clock
 }
 
-func NewCountRing(dtInterval time.Duration, size int) *CountRing {
+func NewCountRing(dtInterval time.Duration, size int, clocks ...clock.Clock) *CountRing {
+	c := clock.New()
+	if len(clocks) == 1 {
+		c = clocks[0]
+	}
+
 	return &CountRing{
 		dtInterval: dtInterval,
 		ring:       make([]int, size),
-		clock:      clock.New(),
+		clock:      c,
 	}
 }
 

@@ -36,6 +36,7 @@ func (c *Config) Mock(cl clock.Clock) {
 
 func NewConfig() *Config {
 	return &Config{
+		clock:       clock.New(),
 		LogFormat:   DefaultLogFormat,
 		TimeFormat:  DefaultTimeFormat,
 		AggInterval: time.Second * 1,

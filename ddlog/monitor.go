@@ -13,15 +13,27 @@ type Monitor struct {
 	rollingCount *util.CountRing
 	pageCount    *MetricCounter
 
-	*Config
+	c    *Config
+	stop chan bool
 }
 
 func NewMonitor(c *Config) *Monitor {
 	return &Monitor{
-		rollingCount: util.NewCountRing(c.AggInterval, c.numWindowsKept()),
+		rollingCount: util.NewCountRing(c.AggInterval, c.numWindowsKept(), c.clock),
 		pageCount:    NewMetricCounter(),
-		Config:       c,
+		c:            c,
+		stop:         make(chan bool),
 	}
+}
+
+func (m *Monitor) Stop() {
+	m.stop <- true
+}
+
+func (m *Monitor) WindowCount() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.rollingCount.Sum()
 }
 
 // TopK returns a sorted list of the top k visited pages since the program started.
@@ -34,19 +46,24 @@ func (m *Monitor) TopK(k int) []*PageCount {
 
 // Start collecting metrics on the messages
 func (m *Monitor) Start(msgChan <-chan *Message) {
-	intervalTick := m.clock.Tick(m.Config.AggInterval)
+	intervalTicker := m.c.clock.Ticker(m.c.AggInterval)
 
+	defer intervalTicker.Stop()
 	for {
 		select {
 		case msg := <-msgChan:
 			m.mu.Lock()
 			m.rollingCount.Inc(msg.Time, 1)
+			m.pageCount.Inc(msg.EventName(), 1)
 			m.mu.Unlock()
-		case <-intervalTick:
+		case <-intervalTicker.C:
 			// updates the rolling count when no messages have arrived in the last interval.
 			m.mu.Lock()
 			m.rollingCount.Tick()
 			m.mu.Unlock()
+		case <-m.stop:
+			return
 		}
+
 	}
 }
