@@ -3,12 +3,39 @@ package ddlog
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
-func newParser(f string) *Parser {
+// common test setup
+type testCase struct {
+	p *Parser
+	g *Generator
+	c *Config
+	t *testing.T
+	a *require.Assertions
+}
+
+func newTestCase(t *testing.T, fmt ...string) (*testCase, *require.Assertions) {
 	c := NewConfig()
-	c.LogFormat = f
-	return New(c)
+
+	if len(fmt) == 1 {
+		c.LogFormat = fmt[0]
+	}
+	assert := require.New(t)
+	return &testCase{
+		p: c.NewParser(),
+		g: c.NewGenerator(),
+		c: c,
+		t: t,
+		a: assert,
+	}, assert
+}
+
+func (tc *testCase) MustParse(l string) *Message {
+	m, err := tc.p.Parse(l)
+	tc.a.NoError(err)
+	return m
 }
 
 func TestParserExample(t *testing.T) {

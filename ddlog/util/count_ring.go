@@ -1,14 +1,12 @@
 package util
 
 import (
-	"sync"
 	"time"
 
 	"github.com/benbjohnson/clock"
 )
 
 type CountRing struct {
-	mu         sync.RWMutex
 	dtInterval time.Duration
 
 	i    int
@@ -27,6 +25,11 @@ func NewCountRing(dtInterval time.Duration, size int) *CountRing {
 	}
 }
 
+// Mock the clock for testing using the given clock.
+func (r *CountRing) Mock(c clock.Clock) {
+	r.clock = c
+}
+
 func (r *CountRing) advance(by int) {
 	r.i = (r.i + by) % len(r.ring)
 	r.ring[r.i] = 0
@@ -35,9 +38,6 @@ func (r *CountRing) advance(by int) {
 // Tick advances current even in the absence of messages.
 // Try to call once per dtInterval.
 func (r *CountRing) Tick() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	now := r.clock.Now()
 	dt := now.Sub(r.lastMsgTime)
 	if dt >= r.dtInterval {
@@ -48,8 +48,6 @@ func (r *CountRing) Tick() {
 
 // Sum of the data.
 func (r *CountRing) Sum() int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 
 	s := 0
 	for _, v := range r.ring {
@@ -61,8 +59,6 @@ func (r *CountRing) Sum() int {
 // Inc the bucket corresponding to time `at`.
 // Discard if the time is before the current time.
 func (r *CountRing) Inc(at time.Time, by int) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 
 	t := at.Truncate(r.dtInterval)
 
@@ -79,6 +75,7 @@ func (r *CountRing) Inc(at time.Time, by int) bool {
 		r.advance(dt)
 		r.ring[r.i] += by
 	} else {
+		// TODO - Allow back filling buckets that still are availible.
 		return false
 	}
 

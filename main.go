@@ -6,12 +6,10 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	"github.com/gee-go/ddlog/ddlog"
 	"github.com/hpcloud/tail"
-	"github.com/olekukonko/tablewriter"
 )
 
 func parseFlags() *ddlog.Config {
@@ -57,7 +55,7 @@ func main() {
 
 	// tail lines -> messages
 	msgChan := make(chan *ddlog.Message)
-	lineParser := ddlog.New(config)
+	lineParser := config.NewParser()
 	go func() {
 		defer close(msgChan)
 		for line := range fileTail.Lines {
@@ -75,27 +73,27 @@ func main() {
 	}()
 
 	// process messages
-	metricStore := ddlog.NewMetricStore(config)
+	// metricStore := ddlog.NewMetricStore(config)
 
-	go metricStore.Start(msgChan, func(e *ddlog.MetricEvent) {
+	// go metricStore.Start(msgChan, func(e *ddlog.MetricEvent) {
 
-		if e.Alert != nil {
-			if e.Alert.Done {
-				fmt.Printf("[Alert Done] at %s duration=%s\n", e.Alert.End, e.Alert.End.Sub(e.Alert.Start))
-			} else {
-				fmt.Printf("High traffic generated an alert - hits = %v, triggered at %s", e.Alert.Count, e.Alert.Start)
-			}
-		}
+	// 	if e.Alert != nil {
+	// 		if e.Alert.Done {
+	// 			fmt.Printf("[Alert Done] at %s duration=%s\n", e.Alert.End, e.Alert.End.Sub(e.Alert.Start))
+	// 		} else {
+	// 			fmt.Printf("High traffic generated an alert - hits = %v, triggered at %s", e.Alert.Count, e.Alert.Start)
+	// 		}
+	// 	}
 
-		fmt.Println("Top 5 Pages")
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Page", "Total Visits"})
-		for _, top := range e.TopPages {
-			table.Append([]string{top.Name, strconv.Itoa(top.Count)})
-		}
-		table.Render()
-		fmt.Println("")
-	})
+	// 	fmt.Println("Top 5 Pages")
+	// 	table := tablewriter.NewWriter(os.Stdout)
+	// 	table.SetHeader([]string{"Page", "Total Visits"})
+	// 	for _, top := range e.TopPages {
+	// 		table.Append([]string{top.Name, strconv.Itoa(top.Count)})
+	// 	}
+	// 	table.Render()
+	// 	fmt.Println("")
+	// })
 
 	done := make(chan bool)
 	<-done

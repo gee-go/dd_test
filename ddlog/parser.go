@@ -6,7 +6,7 @@ type Parser struct {
 	config *Config
 }
 
-func New(c *Config) *Parser {
+func NewParser(c *Config) *Parser {
 	return &Parser{config: c, b: &buffer{}}
 }
 
