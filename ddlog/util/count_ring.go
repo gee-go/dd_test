@@ -3,6 +3,8 @@ package util
 import (
 	"sync"
 	"time"
+
+	"github.com/benbjohnson/clock"
 )
 
 type CountRing struct {
@@ -12,13 +14,16 @@ type CountRing struct {
 	i    int
 	ring []int
 
-	current time.Time
+	current     time.Time // the truncated time of the current bucket.
+	lastMsgTime time.Time // the most recent message time.
+	clock       clock.Clock
 }
 
 func NewCountRing(dtInterval time.Duration, size int) *CountRing {
 	return &CountRing{
 		dtInterval: dtInterval,
 		ring:       make([]int, size),
+		clock:      clock.New(),
 	}
 }
 
@@ -27,9 +32,18 @@ func (r *CountRing) advance(by int) {
 	r.ring[r.i] = 0
 }
 
-// Start auto moves elements as time goes on.
-func (r *CountRing) Start() {
+// Tick advances current even in the absence of messages.
+// Try to call once per dtInterval.
+func (r *CountRing) Tick() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
+	now := r.clock.Now()
+	dt := now.Sub(r.lastMsgTime)
+	if dt >= r.dtInterval {
+		r.lastMsgTime = now
+		r.advance(int(dt / r.dtInterval))
+	}
 }
 
 // Sum of the data.
@@ -56,6 +70,7 @@ func (r *CountRing) Inc(at time.Time, by int) bool {
 		r.current = t
 	}
 
+	r.lastMsgTime = r.clock.Now()
 	if t.Equal(r.current) {
 		r.ring[r.i] += by
 	} else if t.After(r.current) {
