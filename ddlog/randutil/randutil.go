@@ -68,3 +68,12 @@ func (r *Rand) SelectString(choices ...string) string {
 	return choices[r.Rand.Intn(len(choices))]
 
 }
+
+func (r *Rand) SelectInt(choices ...int) int {
+	if len(choices) == 0 {
+		return 0
+	}
+
+	return choices[r.Rand.Intn(len(choices))]
+
+}
