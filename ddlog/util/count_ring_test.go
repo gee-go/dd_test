@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/benbjohnson/clock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,6 +25,24 @@ func TestCountRing(t *testing.T) {
 	a.Equal([]int{2, 1, 0}, ring.ring)
 	a.Equal(1, ring.i)
 	a.Equal(3, ring.Sum())
+}
+
+func TestCountRingTick(t *testing.T) {
+	a := require.New(t)
+	ring := NewCountRing(time.Second, 3)
+	mclock := clock.NewMock()
+	ring.clock = mclock
+	start := ring.clock.Now().Round(ring.dtInterval)
+	ring.Inc(start, 1)
+	a.Equal([]int{1, 0, 0}, ring.ring)
+	a.Equal(0, ring.i)
+
+	ring.Tick()
+	a.Equal(0, ring.i)
+	mclock.Add(time.Second)
+	ring.Tick()
+	a.Equal(1, ring.i)
+
 }
 
 func TestCountRingSkip(t *testing.T) {
