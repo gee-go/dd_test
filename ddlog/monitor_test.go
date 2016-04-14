@@ -33,6 +33,56 @@ func newMonitorTestCase() *monitorTestCase {
 	}
 }
 
+func (tc *monitorTestCase) sendAndProcess(msgChan chan *Message, count int) {
+	// create count messages
+	go func() {
+		for i := 0; i < count; i++ {
+			msgChan <- tc.g.RandMsg()
+		}
+		tc.m.Stop()
+	}()
+
+	tc.m.Start(msgChan)
+}
+
+func TestMonitorAlert(t *testing.T) {
+	t.Parallel()
+	a := require.New(t)
+	tc := newMonitorTestCase()
+
+	msgChan := make(chan *Message)
+
+	// Send exactly alert threshold
+	tc.sendAndProcess(msgChan, tc.c.AlertThreshold)
+	a.Equal(tc.c.AlertThreshold, tc.m.WindowCount())
+	a.Empty(tc.m.Alerts(), "Alert should happen at threshold+1 yet")
+
+	// Send 1 more - should cause an alert.
+	tc.sendAndProcess(msgChan, 1)
+	a.Len(tc.m.Alerts(), 1)
+	alert := tc.m.Alerts()[0]
+	a.False(alert.IsDone())
+
+	// Send more events - should be only 1 event.
+	tc.sendAndProcess(msgChan, 1)
+	a.Len(tc.m.Alerts(), 1)
+
+	// Jump a window away - alert should stop
+	go func() {
+		tc.mclock.Add(tc.c.WindowSize * 2)
+		tc.m.Stop()
+	}()
+	tc.m.Start(msgChan)
+	a.Len(tc.m.Alerts(), 2)
+	a.True(tc.m.Alerts()[1].IsDone())
+
+	// create another alert.
+
+	tc.sendAndProcess(msgChan, tc.c.AlertThreshold+1)
+	a.Len(tc.m.Alerts(), 3)
+	a.False(tc.m.Alerts()[2].IsDone())
+}
+
 func TestMonitorStart(t *testing.T) {
 	t.Parallel()
 	a := require.New(t)
@@ -73,7 +123,7 @@ func TestMonitorStart(t *testing.T) {
 	a.Equal(visitCount, m.WindowCount())
 
 	go func() {
-		// Advance 1m59s
+		// Advance 1m59s by seconds
 		for i := 1; i < 120; i++ {
 			tc.Tick(1 * time.Second)
 		}

@@ -11,14 +11,6 @@ type Alert struct {
 	Count int
 }
 
-func (a *Alert) Send(ch chan *Alert) {
-	select {
-	case ch <- a.Copy():
-	// no block
-	default:
-		return
-	}
-}
 func (a *Alert) String() string {
 	if a.IsDone() {
 		return fmt.Sprintf("[Alert Done] at %s duration=%v\n", a.End, a.End.Sub(a.Start))

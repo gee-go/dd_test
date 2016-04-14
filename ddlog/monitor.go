@@ -16,7 +16,7 @@ type Monitor struct {
 	pageCount    *MetricCounter
 	alert        *Alert
 
-	alerts []*Alert
+	alerts []*Alert // TODO - this grows forever.
 
 	c *Config
 
