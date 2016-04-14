@@ -22,8 +22,9 @@ type Config struct {
 	TimeFormat string
 
 	// Montitor Config
-	AggInterval time.Duration // How often to aggregate lines for the rolling window.
-	WindowSize  time.Duration // How long to keep aggregates for the rolling window.
+	AggInterval    time.Duration // How often to aggregate lines for the rolling window.
+	WindowSize     time.Duration // How long to keep aggregates for the rolling window.
+	AlertThreshold int
 
 	// File Config
 	Filename string
@@ -36,11 +37,12 @@ func (c *Config) Mock(cl clock.Clock) {
 
 func NewConfig() *Config {
 	return &Config{
-		clock:       clock.New(),
-		LogFormat:   DefaultLogFormat,
-		TimeFormat:  DefaultTimeFormat,
-		AggInterval: time.Second * 1,
-		WindowSize:  time.Minute * 2,
+		clock:          clock.New(),
+		LogFormat:      DefaultLogFormat,
+		TimeFormat:     DefaultTimeFormat,
+		AggInterval:    time.Second * 1,
+		WindowSize:     time.Minute * 2,
+		AlertThreshold: 100,
 	}
 }
 

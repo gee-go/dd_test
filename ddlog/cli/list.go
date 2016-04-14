@@ -9,6 +9,11 @@ type List struct {
 
 func (l *List) AddLine(line string) {
 	l.lines = append(l.lines, line)
+	over := len(l.lines) - l.h
+
+	if over > 0 {
+		l.lines = l.lines[over:]
+	}
 }
 
 func (l *List) Render() {

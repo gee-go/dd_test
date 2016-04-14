@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gee-go/ddlog/ddlog"
 	"github.com/gee-go/ddlog/ddlog/cli"
@@ -89,10 +90,10 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
-	// go func() {
-
-	// 	os.Exit(0)
-	// }()
+	go func() {
+		<-signalChan
+		os.Exit(0)
+	}()
 
 	// tail lines -> messages
 	msgChan := make(chan *ddlog.Message)
@@ -112,36 +113,16 @@ func main() {
 			msgChan <- m
 		}
 	}()
-
+	config.AlertThreshold = 10
+	config.WindowSize = time.Second * 10
 	mon := config.NewMonitor()
 	go mon.Start(msgChan)
-
-	// process messages
-	// metricStore := ddlog.NewMetricStore(config)
-
-	// go metricStore.Start(msgChan, func(e *ddlog.MetricEvent) {
-
-	// 	if e.Alert != nil {
-	// 		if e.Alert.Done {
-	// 			fmt.Printf("[Alert Done] at %s duration=%s\n", e.Alert.End, e.Alert.End.Sub(e.Alert.Start))
-	// 		} else {
-	// 			fmt.Printf("High traffic generated an alert - hits = %v, triggered at %s", e.Alert.Count, e.Alert.Start)
-	// 		}
-	// 	}
-
-	// 	fmt.Println("Top 5 Pages")
-	// 	table := tablewriter.NewWriter(os.Stdout)
-	// 	table.SetHeader([]string{"Page", "Total Visits"})
-	// 	for _, top := range e.TopPages {
-	// 		table.Append([]string{top.Name, strconv.Itoa(top.Count)})
-	// 	}
-	// 	table.Render()
-	// 	fmt.Println("")
-	// })
-
-	// initUI(quitChan)
 
 	ui := cli.NewUI(mon)
 
 	ui.Start()
+
+	// for a := range mon.AlertChan() {
+	// 	fmt.Println(a)
+	// }
 }

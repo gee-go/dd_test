@@ -15,6 +15,7 @@ type UI struct {
 	Mon       *ddlog.Monitor
 	TopKTable *Table
 	AlertList *List
+	Head      *List
 
 	quitChan   chan bool
 	resizeChan chan termbox.Event
@@ -26,6 +27,7 @@ func NewUI(mon *ddlog.Monitor) *UI {
 
 		quitChan:   make(chan bool, 1),
 		resizeChan: make(chan termbox.Event),
+		Head:       NewList(),
 		TopKTable:  NewTable(),
 		AlertList:  NewList(),
 	}
@@ -58,13 +60,18 @@ func (ui *UI) Resize() {
 	w, h := termbox.Size()
 
 	headerHeight := 3
+	ui.Head.w = w
+	ui.Head.h = headerHeight
+
+	footerHeight := 4
+
 	ui.TopKTable.w = w / 2
 	ui.TopKTable.y = headerHeight
-	ui.TopKTable.h = h - headerHeight
+	ui.TopKTable.h = h - headerHeight - footerHeight
 
 	ui.AlertList.w = w / 2
 	ui.AlertList.y = headerHeight
-	ui.AlertList.h = h - headerHeight
+	ui.AlertList.h = h - headerHeight - footerHeight
 	ui.AlertList.x = w / 2
 }
 
@@ -76,12 +83,17 @@ func (ui *UI) StartUpdate(rate time.Duration) {
 
 	for {
 		select {
+		case a := <-ui.Mon.AlertChan():
+			ui.AlertList.AddLine(a.(*ddlog.Alert).String())
+			ui.UpdateAlert()
+			termbox.Flush()
 		case <-ui.quitChan:
 			return
 		case <-ui.resizeChan:
 			ui.Resize()
 		case <-refreshTicker.C:
-			ui.UpdateAlert()
+			ui.Head.AddLine(strconv.Itoa(ui.Mon.WindowCount()))
+			ui.Head.Render()
 			ui.UpdateTopK(ui.TopKTable.h)
 			termbox.Flush()
 		}
