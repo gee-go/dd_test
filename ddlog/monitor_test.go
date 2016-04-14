@@ -25,6 +25,7 @@ func (tc *monitorTestCase) Tick(dt time.Duration) {
 func newMonitorTestCase() *monitorTestCase {
 	config := NewConfig()
 	mclock := clock.NewMock()
+	mclock.Set(time.Now())
 	config.Mock(mclock)
 
 	return &monitorTestCase{
@@ -35,17 +36,11 @@ func newMonitorTestCase() *monitorTestCase {
 	}
 }
 
-func (tc *monitorTestCase) sendAndProcess(msgChan chan *Message, count int) {
-	ctx, cancel := context.WithCancel(context.Background())
-	// create count messages
-	go func() {
-		for i := 0; i < count; i++ {
-			msgChan <- tc.g.RandMsg()
-		}
-		cancel()
-	}()
-
-	tc.m.Start(ctx, msgChan)
+func (tc *monitorTestCase) sendNMsg(msgChan chan *Message, count int) {
+	for i := 0; i < count; i++ {
+		msgChan <- tc.g.RandMsg()
+	}
+	time.Sleep(time.Millisecond) // allow proccessing
 }
 
 func TestMonitorAlert(t *testing.T) {
@@ -54,35 +49,33 @@ func TestMonitorAlert(t *testing.T) {
 	tc := newMonitorTestCase()
 
 	msgChan := make(chan *Message)
+	ctx, cancel := context.WithCancel(context.Background())
+	go tc.m.Start(ctx, msgChan)
+	defer cancel()
 
 	// Send exactly alert threshold
-	tc.sendAndProcess(msgChan, tc.c.AlertThreshold)
+	tc.sendNMsg(msgChan, tc.c.AlertThreshold)
 	a.Equal(tc.c.AlertThreshold, tc.m.WindowCount())
 	a.Empty(tc.m.Alerts(), "Alert should happen at threshold+1 yet")
 
 	// Send 1 more - should cause an alert.
-	tc.sendAndProcess(msgChan, 1)
+	tc.sendNMsg(msgChan, 1)
 	a.Len(tc.m.Alerts(), 1)
 	alert := tc.m.Alerts()[0]
 	a.False(alert.IsDone())
 
 	// Send more events - should be only 1 event.
-	tc.sendAndProcess(msgChan, 1)
+	tc.sendNMsg(msgChan, 1)
 	a.Len(tc.m.Alerts(), 1)
 
 	// Jump a window away - alert should stop
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		tc.mclock.Add(tc.c.WindowSize * 2)
-		cancel()
-	}()
-	tc.m.Start(ctx, msgChan)
+	tc.mclock.Add(tc.c.WindowSize * 2)
 	a.Len(tc.m.Alerts(), 2)
 	a.True(tc.m.Alerts()[1].IsDone())
 
 	// create another alert.
 
-	tc.sendAndProcess(msgChan, tc.c.AlertThreshold+1)
+	tc.sendNMsg(msgChan, tc.c.AlertThreshold+1)
 	a.Len(tc.m.Alerts(), 3)
 	a.False(tc.m.Alerts()[2].IsDone())
 }
@@ -94,6 +87,9 @@ func TestMonitorStart(t *testing.T) {
 
 	m, g := tc.m, tc.g
 	msgChan := make(chan *Message)
+	ctx, cancel := context.WithCancel(context.Background())
+	go m.Start(ctx, msgChan)
+	defer cancel()
 
 	// Visit a bunch of pages.
 	visits := map[string]int{
@@ -102,50 +98,26 @@ func TestMonitorStart(t *testing.T) {
 		"/d": 9,
 		"/x": 2,
 	}
-	visitCount := 0
-	for _, vc := range visits {
-		visitCount += vc
-	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		for page, visitCount := range visits {
-			for i := 0; i < visitCount; i++ {
-				msgChan <- g.MsgWithPage(page)
-			}
+	totalVisitCount := 0
+	for page, vc := range visits {
+		totalVisitCount += vc
+		for i := 0; i < vc; i++ {
+			msgChan <- g.MsgWithPage(page)
 		}
-		cancel()
-	}()
-
-	// Blocks until stopped
-	m.Start(ctx, msgChan)
-
+	}
+	time.Sleep(time.Millisecond) // allow proccessing
 	// check current state.
 	top2 := m.TopK(2)
 	a.Len(top2, 2)
 	a.Equal("/d", top2[0].Name)
 	a.Equal("/b", top2[1].Name)
-	a.Equal(visitCount, m.WindowCount())
+	a.Equal(totalVisitCount, m.WindowCount())
 
-	ctx, cancel = context.WithCancel(context.Background())
-	go func() {
-		// Advance 1m59s by seconds
-		for i := 1; i < 120; i++ {
-			tc.Tick(1 * time.Second)
-		}
-		cancel()
-	}()
+	// Advance just before window expires
+	tc.Tick(tc.c.WindowSize - 1*time.Second)
+	a.Equal(totalVisitCount, m.WindowCount())
 
-	m.Start(ctx, msgChan)
-	a.Equal(visitCount, m.WindowCount())
-
-	ctx, cancel = context.WithCancel(context.Background())
-	go func() {
-		// Advance 1s more
-		tc.Tick(1 * time.Second)
-		cancel()
-	}()
-	m.Start(ctx, msgChan)
-	// Old value's no longer exist because it's been 2 min.
+	tc.Tick(time.Second)
 	a.Equal(0, m.WindowCount())
 }
