@@ -20,7 +20,14 @@ func (h *countGroupHeap) get(i int) int {
 }
 
 func (h *countGroupHeap) Less(i, j int) bool {
-	return h.get(i) < h.get(j)
+	// sort by count then key
+	iv, jv := h.get(i), h.get(j)
+
+	if iv == jv {
+		return h.keys[i] < h.keys[j]
+	}
+
+	return iv < jv
 }
 func (h *countGroupHeap) Swap(i, j int) { h.keys[i], h.keys[j] = h.keys[j], h.keys[i] }
 
