@@ -2,6 +2,28 @@ package cli
 
 import "github.com/nsf/termbox-go"
 
+type Line struct {
+	*view
+	val string
+}
+
+func NewLine() *Line {
+	return &Line{view: BlankView()}
+}
+
+func (l *Line) Set(v string) {
+	if l.val == v {
+		return
+	}
+
+	l.val = v
+	j := 0
+	for _, ch := range l.val {
+		termbox.SetCell(l.x+j, l.y, ch, fgColor, bgColor)
+		j++
+	}
+}
+
 type List struct {
 	*view
 	lines []string

@@ -35,6 +35,19 @@ func (r *CountRing) Mock(c clock.Clock) {
 	r.clock = c
 }
 
+func (r *CountRing) Spark() []float64 {
+	out := make([]float64, len(r.ring))
+	n := len(r.ring)
+
+	for i := 1; i <= n; i++ {
+		j := (r.i + i) % len(r.ring)
+
+		out[i-1] = float64(r.ring[j])
+	}
+
+	return out
+}
+
 func (r *CountRing) advance(by int) {
 	r.i = (r.i + by) % len(r.ring)
 	r.ring[r.i] = 0

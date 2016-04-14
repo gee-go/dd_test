@@ -22,7 +22,8 @@ type Generator struct {
 
 	// If true, Generate fields with full range of unicode chars.
 	// Otherwise only use ascii.
-	UseUnicode bool
+	UseUnicode  bool
+	PageChoices []string
 }
 
 // NewGenerator inits a Generator with the given config.
@@ -39,9 +40,23 @@ func NewGenerator(c *Config) *Generator {
 	}
 }
 
+func (g *Generator) SeedPageChoice(n int) {
+	for i := 0; i < n; i++ {
+		g.PageChoices = append(g.PageChoices, g.r.Alpha(g.r.IntRange(1, 20)))
+	}
+
+}
+
 func (g *Generator) randURI() string {
 	r := g.r
 	var u bytes.Buffer
+
+	// preset pages as opposed to random.
+	if len(g.PageChoices) > 0 {
+
+		u.WriteString("/")
+		u.WriteString(g.r.SelectString(g.PageChoices...))
+	}
 
 	// 1 to 5 path components
 	for i := 0; i < r.IntRange(1, 6); i++ {

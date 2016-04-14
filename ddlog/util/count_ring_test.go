@@ -27,6 +27,31 @@ func TestCountRing(t *testing.T) {
 	a.Equal(3, ring.Sum())
 }
 
+func TestCountRingSpark(t *testing.T) {
+	a := require.New(t)
+	ring := NewCountRing(time.Second, 3)
+	start := time.Now().Round(ring.dtInterval)
+
+	incAt := func(step int, by int) bool {
+		t := start.Add(time.Second * time.Duration(step))
+		return ring.Inc(t, by)
+	}
+
+	incAt(0, 1)
+	incAt(1, 2)
+	incAt(2, 3)
+
+	a.Equal([]int{1, 2, 3}, ring.ring)
+	a.Equal(2, ring.i)
+	a.Equal([]float64{1, 2, 3}, ring.Spark())
+
+	ring.i = 1
+	a.Equal([]float64{3, 1, 2}, ring.Spark())
+
+	ring.i = 0
+	a.Equal([]float64{2, 3, 1}, ring.Spark())
+}
+
 func TestCountRingOldMessages(t *testing.T) {
 	a := require.New(t)
 	ring := NewCountRing(time.Second, 3)

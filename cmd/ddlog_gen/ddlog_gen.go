@@ -4,11 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/gee-go/ddlog/ddlog"
-	"github.com/gee-go/ddlog/ddlog/randutil"
 )
 
 type Opts struct {
@@ -35,14 +33,21 @@ func parseFlags() *Opts {
 	return o
 }
 
+func createAtRate(r time.Duration) {
+
+}
+
 func main() {
 	opts := parseFlags()
 	g := ddlog.NewGenerator(&opts.Config)
 	g.UseUnicode = false
+	g.SeedPageChoice(10)
 
-	for range time.Tick(opts.Rate) {
+	for i := 0; i < 200; i++ {
 		m := g.RandMsg()
-		m.URI = "/" + randutil.R.Alpha(rand.Intn(15))
 		fmt.Println(m)
+
+		time.Sleep(opts.Rate)
 	}
+
 }

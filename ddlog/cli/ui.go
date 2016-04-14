@@ -8,6 +8,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/gee-go/ddlog/ddlog"
+	"github.com/joliv/spark"
 	"github.com/nsf/termbox-go"
 )
 
@@ -15,7 +16,8 @@ type UI struct {
 	Mon       *ddlog.Monitor
 	TopKTable *Table
 	AlertList *List
-	Head      *List
+	Head      *Line
+	SparkLine *Line
 
 	quitChan   chan bool
 	resizeChan chan termbox.Event
@@ -27,9 +29,10 @@ func NewUI(mon *ddlog.Monitor) *UI {
 
 		quitChan:   make(chan bool, 1),
 		resizeChan: make(chan termbox.Event),
-		Head:       NewList(),
+		Head:       NewLine(),
 		TopKTable:  NewTable(),
 		AlertList:  NewList(),
+		SparkLine:  NewLine(),
 	}
 }
 
@@ -52,16 +55,19 @@ func (ui *UI) UpdateTopK(k int) {
 }
 
 func (ui *UI) UpdateAlert() {
-	ui.AlertList.AddLine("aaa")
 	ui.AlertList.Render()
 }
 
 func (ui *UI) Resize() {
 	w, h := termbox.Size()
 
-	headerHeight := 3
+	headerHeight := 2
+	ui.SparkLine.w = w
+	ui.SparkLine.h = 1
+
+	ui.Head.y = 1
 	ui.Head.w = w
-	ui.Head.h = headerHeight
+	ui.Head.h = 1
 
 	footerHeight := 4
 
@@ -73,6 +79,10 @@ func (ui *UI) Resize() {
 	ui.AlertList.y = headerHeight
 	ui.AlertList.h = h - headerHeight - footerHeight
 	ui.AlertList.x = w / 2
+
+	ui.UpdateTopK(ui.TopKTable.h)
+	ui.UpdateAlert()
+	termbox.Flush()
 }
 
 func (ui *UI) StartUpdate(rate time.Duration) {
@@ -83,17 +93,21 @@ func (ui *UI) StartUpdate(rate time.Duration) {
 
 	for {
 		select {
-		case a := <-ui.Mon.AlertChan():
-			ui.AlertList.AddLine(a.(*ddlog.Alert).String())
-			ui.UpdateAlert()
-			termbox.Flush()
 		case <-ui.quitChan:
 			return
 		case <-ui.resizeChan:
 			ui.Resize()
 		case <-refreshTicker.C:
-			ui.Head.AddLine(strconv.Itoa(ui.Mon.WindowCount()))
-			ui.Head.Render()
+			alerts := ui.Mon.Alerts()
+			out := make([]string, len(alerts))
+			for i, a := range alerts {
+				out[i] = a.String()
+			}
+
+			ui.AlertList.lines = out
+			ui.UpdateAlert()
+			ui.SparkLine.Set(spark.Line(ui.Mon.Spark()))
+			ui.Head.Set(fmt.Sprintf("%v hits in the past %v", ui.Mon.WindowCount(), ui.Mon.Config().WindowSize))
 			ui.UpdateTopK(ui.TopKTable.h)
 			termbox.Flush()
 		}
@@ -105,7 +119,7 @@ func (ui *UI) Start() {
 		log.Fatal(err)
 	}
 	defer termbox.Close()
-	go ui.StartUpdate(1 * time.Second)
+	go ui.StartUpdate(200 * time.Millisecond)
 	for {
 		ev := termbox.PollEvent()
 

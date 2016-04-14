@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/gee-go/ddlog/ddlog"
 	"github.com/gee-go/ddlog/ddlog/cli"
@@ -113,14 +112,17 @@ func main() {
 			msgChan <- m
 		}
 	}()
-	config.AlertThreshold = 10
-	config.WindowSize = time.Second * 10
+
 	mon := config.NewMonitor()
 	go mon.Start(msgChan)
 
 	ui := cli.NewUI(mon)
 
 	ui.Start()
+	// ticker := time.Tick(time.Second)
+	// for range ticker {
+	// 	fmt.Println(spark.Line(mon.Spark()))
+	// }
 
 	// for a := range mon.AlertChan() {
 	// 	fmt.Println(a)
