@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"log"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -85,6 +86,10 @@ func (ui *UI) Resize() {
 	termbox.Flush()
 }
 
+func (ui *UI) headLine() string {
+	return fmt.Sprintf("%v hits in the past %v  %v goroutines", ui.Mon.WindowCount(), ui.Mon.Config().WindowSize, runtime.NumGoroutine())
+}
+
 func (ui *UI) StartUpdate(rate time.Duration) {
 	refreshTicker := time.NewTicker(rate)
 	defer refreshTicker.Stop()
@@ -107,7 +112,7 @@ func (ui *UI) StartUpdate(rate time.Duration) {
 			ui.AlertList.lines = out
 			ui.UpdateAlert()
 			ui.SparkLine.Set(spark.Line(ui.Mon.Spark()))
-			ui.Head.Set(fmt.Sprintf("%v hits in the past %v", ui.Mon.WindowCount(), ui.Mon.Config().WindowSize))
+			ui.Head.Set(ui.headLine())
 			ui.UpdateTopK(ui.TopKTable.h)
 			termbox.Flush()
 		}
