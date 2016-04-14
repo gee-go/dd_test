@@ -2,10 +2,8 @@ package ddlog
 
 import (
 	"bytes"
-	"fmt"
 	"math/rand"
 	"net/url"
-	"strconv"
 	"time"
 	"unicode"
 
@@ -99,13 +97,13 @@ func (g *Generator) TestMsg() *Message {
 		URI:    "/apache_pb.gif",
 		Proto:  "HTTP/1.0",
 		Status: 200,
-		Size:   "2326",
+		Size:   2326,
 	}
 }
 
 func (g *Generator) MsgWithPage(page string) *Message {
 	m := g.TestMsg()
-	m.URI = fmt.Sprintf("/%s", page)
+	m.URI = page
 	return m
 }
 
@@ -121,6 +119,6 @@ func (g *Generator) RandMsg() *Message {
 		URI:    g.randURI(),
 		Proto:  "HTTP/1.0",
 		Status: g.r.SelectInt(200, 400, 201, 304, 401, 404, 500),
-		Size:   strconv.Itoa(g.r.IntRange(1<<8, 1<<26)),
+		Size:   g.r.IntRange(1<<8, 1<<26),
 	}
 }

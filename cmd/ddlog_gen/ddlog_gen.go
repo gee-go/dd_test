@@ -4,9 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/gee-go/ddlog/ddlog"
+	"github.com/gee-go/ddlog/ddlog/randutil"
 )
 
 type Opts struct {
@@ -39,6 +41,8 @@ func main() {
 	g.UseUnicode = false
 
 	for range time.Tick(opts.Rate) {
-		fmt.Println(g.RandMsg())
+		m := g.RandMsg()
+		m.URI = "/" + randutil.R.Alpha(rand.Intn(15))
+		fmt.Println(m)
 	}
 }

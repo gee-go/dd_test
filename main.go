@@ -6,12 +6,12 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/gee-go/ddlog/ddlog"
+	"github.com/gee-go/ddlog/ddlog/cli"
 	"github.com/hpcloud/tail"
-	"github.com/olekukonko/tablewriter"
 )
 
 func parseFlags() *ddlog.Config {
@@ -30,6 +30,44 @@ func parseFlags() *ddlog.Config {
 	return o
 }
 
+// func initUI(quitChan chan bool) error {
+// 	defer ui.Close()
+// 	if err := ui.Init(); err != nil {
+// 		return err
+// 	}
+
+// 	//termui.UseTheme("helloworld")
+
+// 	topKList := ui.NewList()
+// 	topKList.Items = []string{"Calculating Top Pages"}
+// 	topKList.Height = ui.TermHeight() / 2
+
+// 	ui.Body.AddRows(
+// 		ui.NewRow(
+// 			ui.NewCol(12, 0, topKList),
+// 		),
+// 	)
+
+// 	ui.Body.Align()
+// 	ui.Render(ui.Body)
+
+// 	ui.Handle("/sys/wnd/resize", func(e ui.Event) {
+// 		ui.Render(ui.Body)
+// 		ui.Body.Width = ui.TermWidth()
+// 		ui.Body.Align()
+// 		ui.Render(ui.Body)
+// 	})
+
+// 	ui.Handle("/sys/kbd/q", func(ui.Event) {
+// 		ui.StopLoop()
+// 		ui.Close()
+// 		quitChan <- true
+// 		close(quitChan)
+// 	})
+//   ui.Loop()
+// 	return nil
+// }
+
 func main() {
 	config := parseFlags()
 
@@ -45,19 +83,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer fileTail.Cleanup()
 
 	// setup tail cleanup
+	// quitChan := make(chan bool, 1)
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+
 	go func() {
 		<-signalChan
-		fileTail.Cleanup()
 		os.Exit(0)
 	}()
 
 	// tail lines -> messages
 	msgChan := make(chan *ddlog.Message)
-	lineParser := ddlog.New(config)
+	lineParser := config.NewParser()
 	go func() {
 		defer close(msgChan)
 		for line := range fileTail.Lines {
@@ -73,30 +113,16 @@ func main() {
 			msgChan <- m
 		}
 	}()
+	config.AlertThreshold = 10
+	config.WindowSize = time.Second * 10
+	mon := config.NewMonitor()
+	go mon.Start(msgChan)
 
-	// process messages
-	metricStore := ddlog.NewMetricStore(config)
+	ui := cli.NewUI(mon)
 
-	go metricStore.Start(msgChan, func(e *ddlog.MetricEvent) {
+	ui.Start()
 
-		if e.Alert != nil {
-			if e.Alert.Done {
-				fmt.Printf("[Alert Done] at %s duration=%s\n", e.Alert.End, e.Alert.End.Sub(e.Alert.Start))
-			} else {
-				fmt.Printf("High traffic generated an alert - hits = %v, triggered at %s", e.Alert.Count, e.Alert.Start)
-			}
-		}
-
-		fmt.Println("Top 5 Pages")
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Page", "Total Visits"})
-		for _, top := range e.TopPages {
-			table.Append([]string{top.Name, strconv.Itoa(top.Count)})
-		}
-		table.Render()
-		fmt.Println("")
-	})
-
-	done := make(chan bool)
-	<-done
+	// for a := range mon.AlertChan() {
+	// 	fmt.Println(a)
+	// }
 }

@@ -36,6 +36,11 @@ func (h *countGroupHeap) Pop() interface{} {
 
 // TopK keys by their value from data. O(n log k)
 func TopK(data map[string]int, k int) []string {
+	if k == 0 {
+		var o []string
+		return o
+	}
+
 	i := 0
 	h := &countGroupHeap{
 		data: data,

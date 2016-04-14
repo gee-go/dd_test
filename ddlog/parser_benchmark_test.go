@@ -8,7 +8,7 @@ import (
 )
 
 func benchLineParser(b *testing.B, fmt, line string) {
-	p := newParser(fmt)
+	p := NewConfig().NewParser()
 
 	// error check
 	_, err := p.Parse(line)
