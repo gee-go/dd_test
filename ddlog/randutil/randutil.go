@@ -18,8 +18,8 @@ type Rand struct {
 }
 
 func New() *Rand {
-	seed := time.Now().UnixNano()
-	return Quick(rand.New(rand.NewSource(seed)))
+
+	return Quick(rand.New(&lockedSource{src: rand.NewSource(time.Now().UnixNano())}))
 }
 
 func Quick(r *rand.Rand) *Rand {
