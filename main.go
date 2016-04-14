@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/gee-go/ddlog/ddlog"
+	"github.com/gee-go/ddlog/ddlog/cli"
 	"github.com/hpcloud/tail"
 )
 
@@ -28,6 +29,44 @@ func parseFlags() *ddlog.Config {
 	return o
 }
 
+// func initUI(quitChan chan bool) error {
+// 	defer ui.Close()
+// 	if err := ui.Init(); err != nil {
+// 		return err
+// 	}
+
+// 	//termui.UseTheme("helloworld")
+
+// 	topKList := ui.NewList()
+// 	topKList.Items = []string{"Calculating Top Pages"}
+// 	topKList.Height = ui.TermHeight() / 2
+
+// 	ui.Body.AddRows(
+// 		ui.NewRow(
+// 			ui.NewCol(12, 0, topKList),
+// 		),
+// 	)
+
+// 	ui.Body.Align()
+// 	ui.Render(ui.Body)
+
+// 	ui.Handle("/sys/wnd/resize", func(e ui.Event) {
+// 		ui.Render(ui.Body)
+// 		ui.Body.Width = ui.TermWidth()
+// 		ui.Body.Align()
+// 		ui.Render(ui.Body)
+// 	})
+
+// 	ui.Handle("/sys/kbd/q", func(ui.Event) {
+// 		ui.StopLoop()
+// 		ui.Close()
+// 		quitChan <- true
+// 		close(quitChan)
+// 	})
+//   ui.Loop()
+// 	return nil
+// }
+
 func main() {
 	config := parseFlags()
 
@@ -43,15 +82,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer fileTail.Cleanup()
 
 	// setup tail cleanup
+	// quitChan := make(chan bool, 1)
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-signalChan
-		fileTail.Cleanup()
-		os.Exit(0)
-	}()
+
+	// go func() {
+
+	// 	os.Exit(0)
+	// }()
 
 	// tail lines -> messages
 	msgChan := make(chan *ddlog.Message)
@@ -71,6 +112,9 @@ func main() {
 			msgChan <- m
 		}
 	}()
+
+	mon := config.NewMonitor()
+	go mon.Start(msgChan)
 
 	// process messages
 	// metricStore := ddlog.NewMetricStore(config)
@@ -95,6 +139,9 @@ func main() {
 	// 	fmt.Println("")
 	// })
 
-	done := make(chan bool)
-	<-done
+	// initUI(quitChan)
+
+	ui := cli.NewUI(mon)
+
+	ui.Start()
 }

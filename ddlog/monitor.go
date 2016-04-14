@@ -54,7 +54,7 @@ func (m *Monitor) Start(msgChan <-chan *Message) {
 		case msg := <-msgChan:
 			m.mu.Lock()
 			m.rollingCount.Inc(msg.Time, 1)
-			m.pageCount.Inc(msg.EventName(), 1)
+			m.pageCount.Inc(msg)
 			m.mu.Unlock()
 		case <-intervalTicker.C:
 			// updates the rolling count when no messages have arrived in the last interval.

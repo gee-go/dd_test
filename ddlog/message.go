@@ -19,7 +19,7 @@ type Message struct {
 	URI    string
 	Proto  string
 	Status int
-	Size   string
+	Size   int
 }
 
 // EventName normalize's URI
@@ -58,7 +58,7 @@ func (m *Message) get(f string) string {
 	case "status":
 		return strconv.Itoa(m.Status)
 	case "size":
-		return m.Size
+		return strconv.Itoa(m.Size)
 	default:
 
 	}
@@ -115,7 +115,7 @@ func (m *Message) set(f, s string) error {
 	case "status":
 		m.Status, err = strconv.Atoi(s)
 	case "size":
-		m.Size = s
+		m.Size, err = strconv.Atoi(s)
 	default:
 		return fmt.Errorf("Unknown field %s", f)
 	}
