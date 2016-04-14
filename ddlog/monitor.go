@@ -19,9 +19,6 @@ type Monitor struct {
 	alerts []*Alert // TODO - this grows forever.
 
 	c *Config
-
-	ctx    context.Context
-	cancel context.CancelFunc
 }
 
 func NewMonitor(c *Config) *Monitor {
@@ -40,10 +37,6 @@ func (m *Monitor) Spark() []float64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.rollingCount.Spark()
-}
-
-func (m *Monitor) Stop() {
-	m.cancel()
 }
 
 func (m *Monitor) WindowCount() int {
@@ -87,9 +80,7 @@ func (m *Monitor) checkAlert() {
 }
 
 // Start collecting metrics on the messages
-func (m *Monitor) Start(msgChan <-chan *Message) {
-	m.ctx, m.cancel = context.WithCancel(context.Background())
-
+func (m *Monitor) Start(ctx context.Context, msgChan <-chan *Message) {
 	go func() {
 		intervalTicker := m.c.clock.Ticker(m.c.AggInterval)
 		defer intervalTicker.Stop()
@@ -101,7 +92,7 @@ func (m *Monitor) Start(msgChan <-chan *Message) {
 				m.rollingCount.Tick()
 				m.checkAlert()
 				m.mu.Unlock()
-			case <-m.ctx.Done():
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -115,7 +106,7 @@ func (m *Monitor) Start(msgChan <-chan *Message) {
 			m.pageCount.Inc(msg)
 			m.checkAlert()
 			m.mu.Unlock()
-		case <-m.ctx.Done():
+		case <-ctx.Done():
 			return
 		}
 

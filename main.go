@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"golang.org/x/net/context"
+
 	"github.com/gee-go/ddlog/ddlog"
 	"github.com/gee-go/ddlog/ddlog/cli"
 	"github.com/hpcloud/tail"
@@ -114,7 +116,7 @@ func main() {
 	}()
 
 	mon := config.NewMonitor()
-	go mon.Start(msgChan)
+	go mon.Start(context.Background(), msgChan)
 
 	ui := cli.NewUI(mon)
 

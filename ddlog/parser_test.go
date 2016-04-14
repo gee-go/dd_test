@@ -96,6 +96,5 @@ func TestRandomMessages(t *testing.T) {
 		pm := tc.MustParse(m.String())
 
 		a.Equal(m, pm)
-
 	}
 }

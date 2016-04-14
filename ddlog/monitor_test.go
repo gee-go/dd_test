@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/benbjohnson/clock"
 	"github.com/stretchr/testify/require"
 )
@@ -34,15 +36,16 @@ func newMonitorTestCase() *monitorTestCase {
 }
 
 func (tc *monitorTestCase) sendAndProcess(msgChan chan *Message, count int) {
+	ctx, cancel := context.WithCancel(context.Background())
 	// create count messages
 	go func() {
 		for i := 0; i < count; i++ {
 			msgChan <- tc.g.RandMsg()
 		}
-		tc.m.Stop()
+		cancel()
 	}()
 
-	tc.m.Start(msgChan)
+	tc.m.Start(ctx, msgChan)
 }
 
 func TestMonitorAlert(t *testing.T) {
@@ -68,11 +71,12 @@ func TestMonitorAlert(t *testing.T) {
 	a.Len(tc.m.Alerts(), 1)
 
 	// Jump a window away - alert should stop
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		tc.mclock.Add(tc.c.WindowSize * 2)
-		tc.m.Stop()
+		cancel()
 	}()
-	tc.m.Start(msgChan)
+	tc.m.Start(ctx, msgChan)
 	a.Len(tc.m.Alerts(), 2)
 	a.True(tc.m.Alerts()[1].IsDone())
 
@@ -103,17 +107,18 @@ func TestMonitorStart(t *testing.T) {
 		visitCount += vc
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		for page, visitCount := range visits {
 			for i := 0; i < visitCount; i++ {
 				msgChan <- g.MsgWithPage(page)
 			}
 		}
-		m.Stop()
+		cancel()
 	}()
 
 	// Blocks until stopped
-	m.Start(msgChan)
+	m.Start(ctx, msgChan)
 
 	// check current state.
 	top2 := m.TopK(2)
@@ -122,22 +127,25 @@ func TestMonitorStart(t *testing.T) {
 	a.Equal("/b", top2[1].Name)
 	a.Equal(visitCount, m.WindowCount())
 
+	ctx, cancel = context.WithCancel(context.Background())
 	go func() {
 		// Advance 1m59s by seconds
 		for i := 1; i < 120; i++ {
 			tc.Tick(1 * time.Second)
 		}
-		m.Stop()
+		cancel()
 	}()
-	m.Start(msgChan)
+
+	m.Start(ctx, msgChan)
 	a.Equal(visitCount, m.WindowCount())
 
+	ctx, cancel = context.WithCancel(context.Background())
 	go func() {
 		// Advance 1s more
 		tc.Tick(1 * time.Second)
-		m.Stop()
+		cancel()
 	}()
-	m.Start(msgChan)
+	m.Start(ctx, msgChan)
 	// Old value's no longer exist because it's been 2 min.
 	a.Equal(0, m.WindowCount())
 }
