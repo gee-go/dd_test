@@ -3,6 +3,8 @@ package ddlog
 import (
 	"sync"
 
+	"golang.org/x/net/context"
+
 	"github.com/gee-go/ddlog/ddlog/util"
 )
 
@@ -16,8 +18,10 @@ type Monitor struct {
 
 	alerts []*Alert
 
-	c    *Config
-	stop chan bool
+	c *Config
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func NewMonitor(c *Config) *Monitor {
@@ -25,7 +29,6 @@ func NewMonitor(c *Config) *Monitor {
 		rollingCount: util.NewCountRing(c.AggInterval, c.numWindowsKept(), c.clock),
 		pageCount:    NewMetricCounter(),
 		c:            c,
-		stop:         make(chan bool),
 	}
 }
 
@@ -40,7 +43,7 @@ func (m *Monitor) Spark() []float64 {
 }
 
 func (m *Monitor) Stop() {
-	m.stop <- true
+	m.cancel()
 }
 
 func (m *Monitor) WindowCount() int {
@@ -85,9 +88,25 @@ func (m *Monitor) checkAlert() {
 
 // Start collecting metrics on the messages
 func (m *Monitor) Start(msgChan <-chan *Message) {
-	intervalTicker := m.c.clock.Ticker(m.c.AggInterval)
+	m.ctx, m.cancel = context.WithCancel(context.Background())
 
-	defer intervalTicker.Stop()
+	go func() {
+		intervalTicker := m.c.clock.Ticker(m.c.AggInterval)
+		defer intervalTicker.Stop()
+		for {
+			select {
+			case <-intervalTicker.C:
+				// updates the rolling count when no messages have arrived in the last interval.
+				m.mu.Lock()
+				m.rollingCount.Tick()
+				m.checkAlert()
+				m.mu.Unlock()
+			case <-m.ctx.Done():
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
 		case msg := <-msgChan:
@@ -96,13 +115,7 @@ func (m *Monitor) Start(msgChan <-chan *Message) {
 			m.pageCount.Inc(msg)
 			m.checkAlert()
 			m.mu.Unlock()
-		case <-intervalTicker.C:
-			// updates the rolling count when no messages have arrived in the last interval.
-			m.mu.Lock()
-			m.rollingCount.Tick()
-			m.checkAlert()
-			m.mu.Unlock()
-		case <-m.stop:
+		case <-m.ctx.Done():
 			return
 		}
 

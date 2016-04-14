@@ -3,7 +3,7 @@ package cli
 import "github.com/nsf/termbox-go"
 
 const (
-	fgColor = termbox.ColorWhite
+	fgColor = termbox.ColorDefault
 	bgColor = termbox.ColorDefault
 )
 
