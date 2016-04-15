@@ -43,11 +43,8 @@ func main() {
 	g.UseUnicode = false
 	g.SeedPageChoice(10)
 
-	for i := 0; i < 200; i++ {
-		m := g.RandMsg()
-		fmt.Println(m)
-
-		time.Sleep(opts.Rate)
+	for range time.Tick(opts.Rate) {
+		fmt.Println(g.RandMsg())
 	}
 
 }
