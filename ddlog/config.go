@@ -28,6 +28,8 @@ type Config struct {
 
 	// File Config
 	Filename string
+
+	PlainUI bool // Use plain ui
 }
 
 // Mock time for all things.
@@ -43,6 +45,7 @@ func NewConfig() *Config {
 		AggInterval:    time.Second * 1,
 		WindowSize:     time.Minute * 2,
 		AlertThreshold: 100,
+		PlainUI:        false,
 	}
 }
 

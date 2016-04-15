@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -17,8 +18,11 @@ import (
 
 func parseFlags() *ddlog.Config {
 	o := ddlog.NewConfig()
-	flag.StringVar(&o.LogFormat, "fmt", ddlog.DefaultLogFormat, "a")
-	flag.StringVar(&o.TimeFormat, "time", ddlog.DefaultTimeFormat, "a")
+	flag.StringVar(&o.LogFormat, "fmt", ddlog.DefaultLogFormat, "Log format to parse")
+	flag.StringVar(&o.TimeFormat, "time", ddlog.DefaultTimeFormat, "Time format to parse")
+	flag.DurationVar(&o.WindowSize, "window", o.WindowSize, "Duration to monitor alert count over")
+	flag.IntVar(&o.AlertThreshold, "alert", o.AlertThreshold, "Trigger alert when visit count exceeds this number over the given window")
+	flag.BoolVar(&o.PlainUI, "plain", o.PlainUI, "Use non-fancy output")
 	flag.Parse()
 
 	args := flag.Args()
@@ -30,44 +34,6 @@ func parseFlags() *ddlog.Config {
 
 	return o
 }
-
-// func initUI(quitChan chan bool) error {
-// 	defer ui.Close()
-// 	if err := ui.Init(); err != nil {
-// 		return err
-// 	}
-
-// 	//termui.UseTheme("helloworld")
-
-// 	topKList := ui.NewList()
-// 	topKList.Items = []string{"Calculating Top Pages"}
-// 	topKList.Height = ui.TermHeight() / 2
-
-// 	ui.Body.AddRows(
-// 		ui.NewRow(
-// 			ui.NewCol(12, 0, topKList),
-// 		),
-// 	)
-
-// 	ui.Body.Align()
-// 	ui.Render(ui.Body)
-
-// 	ui.Handle("/sys/wnd/resize", func(e ui.Event) {
-// 		ui.Render(ui.Body)
-// 		ui.Body.Width = ui.TermWidth()
-// 		ui.Body.Align()
-// 		ui.Render(ui.Body)
-// 	})
-
-// 	ui.Handle("/sys/kbd/q", func(ui.Event) {
-// 		ui.StopLoop()
-// 		ui.Close()
-// 		quitChan <- true
-// 		close(quitChan)
-// 	})
-//   ui.Loop()
-// 	return nil
-// }
 
 func main() {
 	config := parseFlags()
@@ -118,15 +84,32 @@ func main() {
 	mon := config.NewMonitor()
 	go mon.Start(context.Background(), msgChan)
 
-	ui := cli.NewUI(mon)
+	if config.PlainUI {
+		alertTicker := time.Tick(time.Second)
+		topKTicker := time.Tick(5 * time.Second)
+		table := cli.NewTable()
+		// TODO - its possible a cycle might be skipped.
+		for {
+			select {
+			case <-topKTicker:
+				topk := mon.TopK(20)
+				if len(topk) == 0 {
+					continue
+				}
+				cli.SetTopK(table, topk)
+				fmt.Println(table.String())
+			case <-alertTicker:
+				alert := mon.PopAlert()
+				if alert != nil {
+					fmt.Println(alert)
+				}
 
-	ui.Start()
-	// ticker := time.Tick(time.Second)
-	// for range ticker {
-	// 	fmt.Println(spark.Line(mon.Spark()))
-	// }
+			}
+		}
 
-	// for a := range mon.AlertChan() {
-	// 	fmt.Println(a)
-	// }
+	} else {
+		ui := cli.NewUI(mon)
+		ui.Start()
+	}
+
 }

@@ -29,6 +29,17 @@ func NewMonitor(c *Config) *Monitor {
 	}
 }
 
+func (m *Monitor) PopAlert() *Alert {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if len(m.alerts) == 0 {
+		return nil
+	}
+	var a *Alert
+	a, m.alerts = m.alerts[0], m.alerts[1:]
+	return a
+}
+
 func (m *Monitor) Config() *Config {
 	return m.c
 }

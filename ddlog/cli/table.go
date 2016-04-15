@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"bytes"
+
 	"github.com/mattn/go-runewidth"
 	"github.com/nsf/termbox-go"
 )
@@ -74,15 +76,39 @@ func (tk *Table) updateColXOffset() {
 	}
 }
 
-func (tk *Table) Render() {
+func (tk *Table) prerender() {
 	for _, row := range tk.rows {
 		tk.updateMaxColWidth(row.Cells)
 	}
 
 	tk.updateColXOffset()
+}
+
+func (tk *Table) String() string {
+	tk.prerender()
+
+	var b bytes.Buffer
+	for _, row := range tk.rows {
+		current := 0
+		for c, col := range row.Cells {
+			x := tk.colXOffset[c]
+			for current < x {
+				b.WriteRune(' ')
+				current++
+			}
+			current += runewidth.StringWidth(col)
+			b.WriteString(col)
+		}
+		b.WriteString("\n")
+	}
+
+	return b.String()
+}
+
+func (tk *Table) Render() {
+	tk.prerender()
 	tk.Clear()
 	for r, row := range tk.rows {
-
 		for c, col := range row.Cells {
 			x := tk.colXOffset[c]
 			for i, ch := range col {

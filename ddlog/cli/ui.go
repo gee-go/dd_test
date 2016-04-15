@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"log"
 	"runtime"
-	"strconv"
 	"time"
 
-	"github.com/dustin/go-humanize"
 	"github.com/gee-go/ddlog/ddlog"
 	"github.com/joliv/spark"
 	"github.com/nsf/termbox-go"
@@ -39,19 +37,7 @@ func NewUI(mon *ddlog.Monitor) *UI {
 
 func (ui *UI) UpdateTopK(k int) {
 	pages := ui.Mon.TopK(k)
-	ui.TopKTable.ResetRows()
-	head := NewRow("Hits", "Hit %", "Bytes", "Page")
-	ui.TopKTable.AddRow(head)
-
-	for _, page := range pages {
-		row := NewRow()
-		row.AddCol(strconv.Itoa(page.Count))
-		row.AddCol(fmt.Sprintf("%3.1f%%", 100*page.CountPercent))
-		row.AddCol(humanize.Bytes(page.Bytes))
-		row.AddCol(page.Name)
-		ui.TopKTable.AddRow(row)
-	}
-
+	SetTopK(ui.TopKTable, pages)
 	ui.TopKTable.Render()
 }
 
